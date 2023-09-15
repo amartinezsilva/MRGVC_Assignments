@@ -16,7 +16,10 @@ int randomNumber(int offset, int range) {
 }
 
 int main() {
-    int range = randomNumber(2, 4);
+	
+	srand((unsigned) time(NULL));
+
+    int range = randomNumber(2, 8);
 
     int matrix1[range][range];
     int matrix2[range][range];
