@@ -13,8 +13,8 @@ int main()
 
   int range = randomIntNumber(2, 8);
 
-  Eigen::MatrixXd matrix1 = Eigen::MatrixXd::Random(range, range);
-  Eigen::MatrixXd matrix2 = Eigen::MatrixXd::Random(range, range);
+  Eigen::MatrixXd matrix1 = Eigen::MatrixXd::Random(range, range)*100.0;
+  Eigen::MatrixXd matrix2 = Eigen::MatrixXd::Random(range, range)*100.0;
   Eigen::MatrixXd mult = matrix1 * matrix2;
 
 
