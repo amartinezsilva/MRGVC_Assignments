@@ -4,12 +4,19 @@
 using namespace std;
 
 //Makes well the functions
+//Dynamic alloc
 //Makes the eigen
 //compare
 
-int randomNumber(int offset, int range) {
+double randomDoubleNumber(double max, double min) {
     // Reyrieve a random number between offset and range
-    int random = offset + (rand() % range);
+    double random = (max - min) * ((double)rand() / (double)RAND_MAX) + min;
+    return random;
+}
+
+int randomIntNumber(int offset, int range) {
+    // Reyrieve a random number between offset and range
+	int random = offset + (rand() % range);
     return random;
 }
 
@@ -17,7 +24,7 @@ int main() {
 	
 	srand((unsigned) time(NULL));
 
-    int range = randomNumber(2, 8);
+    int range = randomIntNumber(2, 8);
 
     double matrix1[range][range];
     double matrix2[range][range];
@@ -27,7 +34,7 @@ int main() {
     for (int i=0; i<range; i++)
         for (int j=0; j<range; j++)
 	{
-	matrix1[i][j] = (double)randomNumber(0, 10);
+	matrix1[i][j] = randomDoubleNumber(0, 100);
 	cout << " " << matrix1[i][j];
 	if(j == range-1)
 		cout << endl;
@@ -37,7 +44,7 @@ int main() {
     for (int i=0; i<range; i++)
         for (int j=0; j<range; j++)
 	{
-	matrix2[i][j] = (double)randomNumber(0, 10);
+	matrix2[i][j] = randomDoubleNumber(0, 100);
 	cout << " " << matrix2[i][j];
 	if(j == range-1)
 		cout << endl;
