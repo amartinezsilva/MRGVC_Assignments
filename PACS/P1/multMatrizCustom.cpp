@@ -3,8 +3,6 @@
 
 using namespace std;
 
-//Random does not work fine
-//We have to change float by double
 //Makes well the functions
 //Makes the eigen
 //compare
@@ -21,15 +19,15 @@ int main() {
 
     int range = randomNumber(2, 8);
 
-    int matrix1[range][range];
-    int matrix2[range][range];
-    int mult[range][range];
+    double matrix1[range][range];
+    double matrix2[range][range];
+    double mult[range][range];
     
     cout << "matriz A:" << endl;
     for (int i=0; i<range; i++)
         for (int j=0; j<range; j++)
 	{
-	matrix1[i][j] = randomNumber(0, 10);
+	matrix1[i][j] = (double)randomNumber(0, 10);
 	cout << " " << matrix1[i][j];
 	if(j == range-1)
 		cout << endl;
@@ -39,7 +37,7 @@ int main() {
     for (int i=0; i<range; i++)
         for (int j=0; j<range; j++)
 	{
-	matrix2[i][j] = randomNumber(0, 10);
+	matrix2[i][j] = (double)randomNumber(0, 10);
 	cout << " " << matrix2[i][j];
 	if(j == range-1)
 		cout << endl;
