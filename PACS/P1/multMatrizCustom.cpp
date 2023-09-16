@@ -1,5 +1,6 @@
 #include <iostream>
 #include <cstdlib>
+#include <chrono>
 
 using namespace std;
 
@@ -22,53 +23,85 @@ int randomIntNumber(int offset, int range) {
 
 int main() {
 	
+	auto start = chrono::high_resolution_clock::now();
+
+	//Set to true to print results -> NEED TO BE FALSE FOR METRICS!!
+	bool debug = false;
+
 	srand((unsigned) time(NULL));
 
-    int range = randomIntNumber(2, 8);
+	//random range
+	int range = randomIntNumber(2, 998);
+	//prefixed range (for experiments N=10, N=100, N=1000)
+	//int range = 2;
 
-    double matrix1[range][range];
-    double matrix2[range][range];
-    double mult[range][range];
+	double * matrix1;
+	double * matrix2;
+	double * mult;
+
+	matrix1 = (double*) calloc (range*range, sizeof(double));
+	matrix2 = (double*) calloc (range*range, sizeof(double));
+	mult = (double*) calloc (range*range, sizeof(double));
     
-    cout << "matriz A:" << endl;
-    for (int i=0; i<range; i++)
-        for (int j=0; j<range; j++)
-	{
-	matrix1[i][j] = randomDoubleNumber(0, 100);
-	cout << " " << matrix1[i][j];
-	if(j == range-1)
-		cout << endl;
-	}
-    cout << " " << endl;
-    cout << "matriz B:" << endl;
-    for (int i=0; i<range; i++)
-        for (int j=0; j<range; j++)
-	{
-	matrix2[i][j] = randomDoubleNumber(0, 100);
-	cout << " " << matrix2[i][j];
-	if(j == range-1)
-		cout << endl;
+	//Autofill matrix 1 with random double numbers
+	for (int i=0; i<range*range; i++){
+		matrix1[i] = randomDoubleNumber(0, 100);
 	}
 
-    for (int i=0; i<range; i++)
-        for (int j=0; j<range; j++)
-	{
-	mult[i][j] = 0;
+	//Autofill matrix 2 with random double numbers
+	for (int i=0; i<range*range; i++){
+		matrix2[i] = randomDoubleNumber(0, 100);
 	}
 
-    cout << " " << endl;
-    cout << "multiplication:" << endl;
-    for (int i=0; i<range; i++)
+	//Perform multiplication
+	for (int i=0; i<range; i++)
         for (int j=0; j<range; j++)
-	{
-	    for (int k=0; k<range; k++)
-	    {
-	    mult[i][j] += matrix1[i][k] * matrix2[k][j];
-	    }
-	cout << " " << mult[i][j];
-	if(j == range-1)
-	    cout << endl;
+		{
+			for (int k=0; k<range; k++) {
+				mult[i*range + j]+= matrix1[i*range + k] * matrix2[k*range + j];
+			}
+		}
+
+	//Print matrices A and B
+	if(debug){
+		cout << "matriz A:" << endl;
+		for (int i=0; i<range; i++)
+			for (int j=0; j<range; j++)
+			{
+				cout << " " << matrix1[i*range + j];
+				if(j == range-1)
+					cout << endl;
+			}
+		cout << " " << endl;
+		cout << "matriz B:" << endl;
+		for (int i=0; i<range; i++)
+			for (int j=0; j<range; j++)
+			{
+				cout << " " << matrix2[i*range+j];
+				if(j == range-1)
+					cout << endl;
+			}
+
+		cout << " " << endl;
+		cout << "multiplication:" << endl;
+		for (int i=0; i<range; i++)
+			for (int j=0; j<range; j++)
+		{
+			cout << " " << mult[i*range + j];
+			if(j == range-1)
+				cout << endl;
+		}
 	}
+
+	free(matrix1);
+	free(matrix2);
+	free(mult);
+
+	auto stop = chrono::high_resolution_clock::now();
+	auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
+ 
+    cout << "N = "<< range << ". Time taken by function: "
+         << duration.count() << " microseconds" << endl;
 
     return 0;
 }
