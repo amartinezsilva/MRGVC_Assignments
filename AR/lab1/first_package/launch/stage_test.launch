@@ -1,0 +1,8 @@
+<launch>
+<node name="stage_ros_example" pkg="stage_ros" type="stageros" args= "$(find turtle_comunic)/world/simple.world"
+output="screen"/>    
+
+<node name="teleop_twist_example" pkg="teleop_twist_keyboard_cpp" type="teleop_twist_keyboard"
+output="screen"/>   
+
+</launch>
