@@ -31,9 +31,9 @@ int main() {
 	srand((unsigned) time(NULL));
 
 	//random range
-	int range = randomIntNumber(2, 998);
+	//int range = randomIntNumber(2, 998);
 	//prefixed range (for experiments N=10, N=100, N=1000)
-	//int range = 2;
+	int range = 2000;
 
 	double * matrix1;
 	double * matrix2;
@@ -43,13 +43,9 @@ int main() {
 	matrix2 = (double*) calloc (range*range, sizeof(double));
 	mult = (double*) calloc (range*range, sizeof(double));
     
-	//Autofill matrix 1 with random double numbers
+	//Autofill matrix 1 and 2 with random double numbers
 	for (int i=0; i<range*range; i++){
 		matrix1[i] = randomDoubleNumber(0, 100);
-	}
-
-	//Autofill matrix 2 with random double numbers
-	for (int i=0; i<range*range; i++){
 		matrix2[i] = randomDoubleNumber(0, 100);
 	}
 
