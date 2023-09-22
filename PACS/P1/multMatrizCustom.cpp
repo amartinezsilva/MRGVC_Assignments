@@ -1,13 +1,7 @@
 #include <iostream>
 #include <cstdlib>
-#include <chrono>
 
 using namespace std;
-
-//Makes well the functions
-//Dynamic alloc
-//Makes the eigen
-//compare
 
 double randomDoubleNumber(double max, double min) {
     // Reyrieve a random number between offset and range
@@ -15,38 +9,38 @@ double randomDoubleNumber(double max, double min) {
     return random;
 }
 
-int randomIntNumber(int offset, int range) {
-    // Reyrieve a random number between offset and range
-	int random = offset + (rand() % range);
-    return random;
+void showMatrix(double * matrix, int range) {
+    for (int i=0; i<range; i++)
+			for (int j=0; j<range; j++)
+			{
+				cout << " " << matrix[i*range + j];
+				if(j == range-1)
+					cout << endl;
+			}
 }
 
 int main() {
 	
-	auto start = chrono::high_resolution_clock::now();
-
 	//Set to true to print results -> NEED TO BE FALSE FOR METRICS!!
-	bool debug = false;
+	bool debug = true;
 
 	srand((unsigned) time(NULL));
 
-	//random range
-	//int range = randomIntNumber(2, 998);
-	//prefixed range (for experiments N=10, N=100, N=1000)
+	//prefixed range (for experiments N=10, N=100, N=1000, N=2000)
 	int range = 2000;
 
-	double * matrix1;
-	double * matrix2;
+	double * matrixA;
+	double * matrixB;
 	double * mult;
 
-	matrix1 = (double*) calloc (range*range, sizeof(double));
-	matrix2 = (double*) calloc (range*range, sizeof(double));
+	matrixA = (double*) calloc (range*range, sizeof(double));
+	matrixB = (double*) calloc (range*range, sizeof(double));
 	mult = (double*) calloc (range*range, sizeof(double));
     
-	//Autofill matrix 1 and 2 with random double numbers
+	//Autofill matrix A and B with random double numbers
 	for (int i=0; i<range*range; i++){
-		matrix1[i] = randomDoubleNumber(0, 100);
-		matrix2[i] = randomDoubleNumber(0, 100);
+		matrixA[i] = randomDoubleNumber(0, 100);
+		matrixB[i] = randomDoubleNumber(0, 100);
 	}
 
 	//Perform multiplication
@@ -54,50 +48,27 @@ int main() {
         for (int j=0; j<range; j++)
 		{
 			for (int k=0; k<range; k++) {
-				mult[i*range + j]+= matrix1[i*range + k] * matrix2[k*range + j];
+				mult[i*range + j]+= matrixA[i*range + k] * matrixB[k*range + j];
 			}
 		}
 
 	//Print matrices A and B
 	if(debug){
 		cout << "matriz A:" << endl;
-		for (int i=0; i<range; i++)
-			for (int j=0; j<range; j++)
-			{
-				cout << " " << matrix1[i*range + j];
-				if(j == range-1)
-					cout << endl;
-			}
+		showMatrix(matrixA, range);
+
 		cout << " " << endl;
 		cout << "matriz B:" << endl;
-		for (int i=0; i<range; i++)
-			for (int j=0; j<range; j++)
-			{
-				cout << " " << matrix2[i*range+j];
-				if(j == range-1)
-					cout << endl;
-			}
+		showMatrix(matrixB, range);
 
 		cout << " " << endl;
 		cout << "multiplication:" << endl;
-		for (int i=0; i<range; i++)
-			for (int j=0; j<range; j++)
-		{
-			cout << " " << mult[i*range + j];
-			if(j == range-1)
-				cout << endl;
-		}
+		showMatrix(mult, range);
 	}
 
-	free(matrix1);
-	free(matrix2);
+	free(matrixA);
+	free(matrixB);
 	free(mult);
-
-	auto stop = chrono::high_resolution_clock::now();
-	auto duration = chrono::duration_cast<chrono::microseconds>(stop - start);
- 
-    cout << "N = "<< range << ". Time taken by function: "
-         << duration.count() << " microseconds" << endl;
 
     return 0;
 }
