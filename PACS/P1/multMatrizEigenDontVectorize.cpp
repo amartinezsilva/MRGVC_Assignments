@@ -1,13 +1,13 @@
 #include <iostream>
 #include <Eigen/Dense>
 
-//DOES NOT WORK -> USE -DEIGEN_DONT_VECTORIZE WHEN COMPILING
+//DISABLE VECTORIZATION
 #define EIGEN_DONT_VECTORIZE 1
 
 using namespace std;
 
 double randomDoubleNumber(double max, double min) {
-    // Reyrieve a random number between offset and range
+    // Retrieve a random number between offset and range
     double random = (max - min) * ((double)rand() / (double)RAND_MAX) + min;
     return random;
 }

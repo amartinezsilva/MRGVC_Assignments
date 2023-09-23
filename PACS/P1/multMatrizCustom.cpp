@@ -4,7 +4,7 @@
 using namespace std;
 
 double randomDoubleNumber(double max, double min) {
-    // Reyrieve a random number between offset and range
+    // Retrieve a random number between offset and range
     double random = (max - min) * ((double)rand() / (double)RAND_MAX) + min;
     return random;
 }
