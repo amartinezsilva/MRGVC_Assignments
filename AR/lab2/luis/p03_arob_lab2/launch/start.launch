@@ -1,0 +1,6 @@
+<launch>
+  <node name="arob_lab2" pkg="stage_ros" type="stageros" args="$(find p03_arob_lab2)/world/simple.world" output="screen"/>
+  <node name="keyboards" pkg="p03_arob_lab2" type="teleop_twist_keyboard" output="screen"/>
+  <node name="low_control" pkg="p03_arob_lab2" type="lowcontrol" output="screen"/>
+  <node name="followTargets" pkg="p03_arob_lab2" type="followTargets" output="screen"/>
+</launch>

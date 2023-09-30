@@ -1,0 +1,6 @@
+<launch>
+  <node name="low_control" pkg="p03_arob_lab2" type="lowcontrol" output="screen"/>
+	<remap from="/base_pose_ground_truth" to="/odom"/>
+	<remap from="/cmd_vel" to="/mobile_base/commands/velocity"/>
+  </node>
+</launch>
