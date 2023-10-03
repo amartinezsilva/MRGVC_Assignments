@@ -310,7 +310,7 @@ if __name__ == '__main__':
     print("3D plane defined by A, B, C, D:")
     print(l_ls)
 
-    distances = np.dot(X_w.T, l_ls)
+    distances = np.dot(X_w.T, l_ls) / np.sqrt(l_ls[0]**2 + l_ls[1]**2 + l_ls[2]**2)
     print("Distances of points A, B, C, D, E to plane:")
     print(distances)
     
