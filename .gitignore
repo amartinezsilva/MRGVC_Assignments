@@ -3,3 +3,6 @@
 *.o
 PACS/P1/eigen-3.4.0/
 *.pyc
+*.zip
+MSAP/Nori2
+MSAP/Nori2_build
