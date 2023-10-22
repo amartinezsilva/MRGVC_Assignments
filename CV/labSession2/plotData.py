@@ -305,7 +305,7 @@ if __name__ == '__main__':
     print("R_c2_c1")
     print(R_c2_c1)
 
-    t_c2_c1 = T_c2_c1.T[-1][:]
+    t_c2_c1 = T_c2_c1.T[-1][0:3]
     print("t_c2_c1:")
     print(t_c2_c1)
 
@@ -419,7 +419,7 @@ if __name__ == '__main__':
     print(np.linalg.det(R_plus90_1))  #det=1
     print("-R_90:")
     print("Determinant:")
-    print(np.linalg.det(R_plus90_2))
+    print(np.linalg.det(R_plus90_2)) #det=-1
     print("R_-90:")
     print(R_minus90_1) 
     print("Determinant:")
@@ -427,15 +427,14 @@ if __name__ == '__main__':
     print("-R_-90:")
     print(R_minus90_2)
     print("Determinant:")
-    print(np.linalg.det(R_minus90_2))
+    print(np.linalg.det(R_minus90_2)) #det=-1
 
     #Possible solutions R_plus90_1, R_minus90_1 (with +-t) -> 4 cases
-
-    T_c2_c1 = ensamble_T(R_plus90_1, t_estimated1)
-    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
     
     #Triangulate points for 4 possible solutions
 
+    T_c2_c1 = ensamble_T(R_plus90_1, t_estimated1)
+    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
     X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
     print("3D reconstructed sol 1:")
     print(X_computed)
@@ -465,6 +464,49 @@ if __name__ == '__main__':
     
     #Exercise 3
 
+    Pi_1 = np.array([[0.0149,0.9483,0.3171,-1.7257]]).T
+    n = Pi_1[0:3].T
+    print(n.shape)
+    d = Pi_1[-1]
+    t_c2_c1 = np.reshape(t_c2_c1, (3,1))
+    print(t_c2_c1.shape)
+
+    A = R_c2_c1 - np.dot(t_c2_c1, n) / d
+
+    H_2_1 = np.linalg.multi_dot([K_c, A, np.linalg.inv(K_c)])
+    print("H21:")
+    print(H_2_1)
+
+    x1FloorData = np.loadtxt("x1FloorData.txt")
+    x2FloorData = np.loadtxt("x2FloorData.txt")
+    x2HomographyFloorData = np.dot(H_2_1, x1FloorData)
+    x2HomographyFloorData = x2HomographyFloorData / x2HomographyFloorData[2][:]
+
+    print("Points transfer from floor points in image 1 to points image 2:")
+    print(x2HomographyFloorData)
+
+    fig = plt.figure(6)
+
+    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x1FloorData[0, :], x1FloorData[1, :],'rx', markersize=10)
+    plotNumberedImagePoints(x1FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    plt.title('Image 1')
+    plt.draw()  # We update the figure display
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+    fig = plt.figure(7)
+
+    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x2HomographyFloorData[0, :], x2HomographyFloorData[1, :],'bx', markersize=10)
+    plt.plot(x2FloorData[0, :], x2FloorData[1, :],'rx', markersize=10)
+
+    plotNumberedImagePoints(x2FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    plt.title('Image 2')
+    plt.draw()  # We update the figure display
+
+    print('Click in the image to continue...')
+    plt.waitforbuttonpress()
 
 
 
