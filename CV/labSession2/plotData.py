@@ -169,23 +169,11 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
-if __name__ == '__main__':
-    np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
-
-    # Load ground truth
-    T_w_c1 = np.loadtxt('T_w_c1.txt')
-    T_w_c2 = np.loadtxt('T_w_c2.txt')
-
-    K_c = np.loadtxt('K_c.txt')
-    X_w = np.loadtxt('X_w.txt')
-
-    x1 = np.loadtxt('x1Data.txt')
-    x2 = np.loadtxt('x2Data.txt')
-
+def plot_3D(X_computed, X_w, T_w_c1, T_w_c2):
 
     ##Plot the 3D cameras and the 3D points
-    fig3D = plt.figure(3)
+    fig3D = plt.figure(4)
 
     ax = plt.axes(projection='3d', adjustable='box')
     ax.set_xlabel('X')
@@ -196,8 +184,13 @@ if __name__ == '__main__':
     drawRefSystem(ax, T_w_c1, '-', 'C1')
     drawRefSystem(ax, T_w_c2, '-', 'C2')
 
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
-    plotNumbered3DPoints(ax, X_w, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
+    #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "real")
+    #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    ax.legend()
 
     #Matplotlib does not correctly manage the axis('equal')
     xFakeBoundingBox = np.linspace(0, 4, 2)
@@ -207,52 +200,39 @@ if __name__ == '__main__':
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
 
-    ## 2D plotting example
-    img1 = cv2.cvtColor(cv2.imread('image1.png'), cv2.COLOR_BGR2RGB)
-    img2 = cv2.cvtColor(cv2.imread('image2.png'), cv2.COLOR_BGR2RGB)
+def plot_3D_sfm(X_computed, T_w_c1, T_w_c2):
+    ##Plot the 3D cameras and the 3D points
+    fig3D = plt.figure(4)
+
+    ax = plt.axes(projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    drawRefSystem(ax, T_w_c1, '-', 'C1')
+    drawRefSystem(ax, T_w_c2, '-', 'C2')
+
+    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
+    #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    ax.legend()
+
+    #Matplotlib does not correctly manage the axis('equal')
+    xFakeBoundingBox = np.linspace(0, 4, 2)
+    yFakeBoundingBox = np.linspace(0, 4, 2)
+    zFakeBoundingBox = np.linspace(0, 4, 2)
+    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
 
 
-    plt.figure(1)
-    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x1[0, :], x1[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x1, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    plt.title('Image 1')
-    plt.draw()  # We update the figure display
-
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
-
-    plt.figure(2)
-    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x2[0, :], x2[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x2, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    plt.title('Image 2')
-    plt.draw()  # We update the figure display
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
-
-    #Exercise 1
-
-    # Find P matrices
-    T_c1_w = np.linalg.inv(T_w_c1)
-    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
-    P1 = np.dot(K_c, P1)
-    print("P1 =")
-    print(P1)
-
-    T_c2_w = np.linalg.inv(T_w_c2)
-    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_w)
-    P2 = np.dot(K_c, P2)
-    print("P2 =")
-    print(P2)
-
-    # Equations
+def triangulate_3D(x1,x2,P1,P2):
 
     X_computed = np.zeros((4,len(X_w[0][:])))
 
-    for i in range(len(x1[0][:])):
+    for i in range(n_matches):
 
-        print("Point: ", i)
+        #print("Point: ", i)
         A = np.zeros((4,4))
         
         #Equations C1
@@ -279,9 +259,6 @@ if __name__ == '__main__':
         A[3][2] = P2[2][2]*x2[1,i] - P2[1][2]
         A[3][3] = P2[2][3]*x2[1,i] - P2[1][3]
 
-        print("A:")
-        print(A)
-
         u, s, vh = np.linalg.svd(A)
         X = np.reshape(vh[-1, :],(4,1))
 
@@ -292,45 +269,103 @@ if __name__ == '__main__':
         X_computed[2][i] = X[2][0]
         X_computed[3][i] = X[3][0]
 
+        # print("3D point SVD:")
+        # print(X)
 
-        print("3D point SVD:")
-        print(X)
+    return X_computed
 
-    ##Plot the 3D cameras and the 3D points
-    fig3D = plt.figure(4)
+if __name__ == '__main__':
+    np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
-    ax = plt.axes(projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    # Load ground truth
+    T_w_c1 = np.loadtxt('T_w_c1.txt')
+    T_w_c2 = np.loadtxt('T_w_c2.txt')
 
-    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    drawRefSystem(ax, T_w_c1, '-', 'C1')
-    drawRefSystem(ax, T_w_c2, '-', 'C2')
+    K_c = np.loadtxt('K_c.txt')
+    X_w = np.loadtxt('X_w.txt')
 
-    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.')
-    #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+    x1 = np.loadtxt('x1Data.txt')
+    x2 = np.loadtxt('x2Data.txt')
 
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
-    #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+    ## 2D plotting example
+    img1 = cv2.cvtColor(cv2.imread('image1.png'), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread('image2.png'), cv2.COLOR_BGR2RGB)
 
-    #Matplotlib does not correctly manage the axis('equal')
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
+
+    # ##Plot the 3D cameras and the 3D points
+    # fig3D = plt.figure(3)
+
+    # ax = plt.axes(projection='3d', adjustable='box')
+    # ax.set_xlabel('X')
+    # ax.set_ylabel('Y')
+    # ax.set_zlabel('Z')
+
+    # drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+    # drawRefSystem(ax, T_w_c1, '-', 'C1')
+    # drawRefSystem(ax, T_w_c2, '-', 'C2')
+
+    # ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
+    # plotNumbered3DPoints(ax, X_w, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    # #Matplotlib does not correctly manage the axis('equal')
+    # xFakeBoundingBox = np.linspace(0, 4, 2)
+    # yFakeBoundingBox = np.linspace(0, 4, 2)
+    # zFakeBoundingBox = np.linspace(0, 4, 2)
+    # plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+    # print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    # plt.show()
+
+
+    # plt.figure(1)
+    # plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
+    # plt.plot(x1[0, :], x1[1, :],'rx', markersize=10)
+    # plotNumberedImagePoints(x1, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    # plt.title('Image 1')
+    # plt.draw()  # We update the figure display
+
+    # print('Click in the image to continue...')
+    # plt.waitforbuttonpress()
+
+    # plt.figure(2)
+    # plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
+    # plt.plot(x2[0, :], x2[1, :],'rx', markersize=10)
+    # plotNumberedImagePoints(x2, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    # plt.title('Image 2')
+    # plt.draw()  # We update the figure display
+    # print('Click in the image to continue...')
+    # plt.waitforbuttonpress()
+
+    #Exercise 1
+
+    n_matches = x1.shape[1]
+
+    # Find P matrices
+    T_c1_w = np.linalg.inv(T_w_c1)
+    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
+    P1 = np.dot(K_c, P1)
+    print("P1 =")
+    print(P1)
+
+    T_c2_w = np.linalg.inv(T_w_c2)
+    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_w)
+    P2 = np.dot(K_c, P2)
+    print("P2 =")
+    print(P2)
+
+    X_computed = triangulate_3D(x1, x2, P1, P2)
+    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
 
     #Exercise 2
 
+    #2.1
     F_provided = np.loadtxt('F_21_test.txt')
     print("F provided:")
     print(F_provided)
 
     draw_epipolar_line_img2(F_provided)
 
-    T_c2_c1 = T_c2_w * T_w_c1
+    #2.2
+    T_c2_c1 = np.dot(T_c2_w,T_w_c1)
     print("T_c2_c1:")
     print(T_c2_c1)
 
@@ -364,7 +399,7 @@ if __name__ == '__main__':
 
     #Compute matrix F
 
-    F_computed = np.linalg.inv(K_c).T * E * np.linalg.inv(K_c)
+    F_computed = np.linalg.multi_dot([np.linalg.inv(K_c).T,E,np.linalg.inv(K_c)])
 
     print("Funtamental matrix F:")
     print(F_computed)
@@ -372,7 +407,136 @@ if __name__ == '__main__':
     #Draw lines with estimated F
     draw_epipolar_line_img2(F_computed)
 
+    #2.3
+    n_matches = x1.shape[1]
+    A = np.zeros((n_matches, 9))
+    for i in range(n_matches):
 
+        x_0 = x1[0][i]
+        x_1 = x2[0][i]
+        y_0 = x1[1][i]
+        y_1 = x2[1][i]
+        w_0 = 1.0
+        w_1 = 1.0
+
+        A[i][0] = x_0*x_1
+        A[i][1] = y_0*x_1
+        A[i][2] = w_0*x_1
+        A[i][3] = x_0*y_1
+        A[i][4] = y_0*y_1
+        A[i][5] = w_0*y_1
+        A[i][6] = x_0*w_1
+        A[i][7] = y_0*w_1
+        A[i][8] = w_0*w_1
+
+    u, s, vh = np.linalg.svd(A)
+    F_matches_vector = np.reshape(vh[-1, :],(9,1))
+
+    print("SVD result F components:")
+    print(F_matches_vector)
+
+    F_matches = np.zeros((3,3))
+    F_matches[0][0] = F_matches_vector[0]
+    F_matches[0][1] = F_matches_vector[1]
+    F_matches[0][2] = F_matches_vector[2]
+    F_matches[1][0] = F_matches_vector[3]
+    F_matches[1][1] = F_matches_vector[4]
+    F_matches[1][2] = F_matches_vector[5]
+    F_matches[2][0] = F_matches_vector[6]
+    F_matches[2][1] = F_matches_vector[7]
+    F_matches[2][2] = F_matches_vector[8]
+
+    print("F from matches:")
+    print(F_matches)
+
+    #Draw lines with estimated F from matches
+    draw_epipolar_line_img2(F_matches)
+
+    #2.4
+
+    E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
+    print("Computed E from F:")
+    print(E)
+
+    u, s, vh = np.linalg.svd(E)
+    t_estimated = np.reshape(u[-1,:], (3,1))
+    t_estimated1 = u[-1,:]
+    print("Estimated t:")
+    print(t_estimated)
+
+    W = np.zeros((3,3))
+    W[0][0] = 0
+    W[0][1] = -1
+    W[0][2] = 0
+    W[1][0] = 1
+    W[1][1] = 0
+    W[1][2] = 0
+    W[2][0] = 0
+    W[2][1] = 0
+    W[2][2] = 1
+
+    R_plus90_1 = np.linalg.multi_dot([u,W,vh.T])
+    R_plus90_2 = - np.linalg.multi_dot([u,W,vh.T])
+    R_minus90_1 = np.linalg.multi_dot([u,W.T,vh.T])
+    R_minus90_2 = - np.linalg.multi_dot([u,W.T,vh.T])
+
+    print("Four possible solutions:")
+    print("R_90:")
+    print(R_plus90_1)
+    print("Determinant:")
+    print(np.linalg.det(R_plus90_1))  #det=1
+    print("-R_90:")
+    print("Determinant:")
+    print(np.linalg.det(R_plus90_2))
+    print("R_-90:")
+    print(R_minus90_1) 
+    print("Determinant:")
+    print(np.linalg.det(R_minus90_1)) #det=1
+    print("-R_-90:")
+    print(R_minus90_2)
+    print("Determinant:")
+    print(np.linalg.det(R_minus90_2))
+
+    #Possible solutions R_plus90_1, R_minus90_1 (with +-t) -> 4 cases
+
+    T_c2_c1 = ensamble_T(R_plus90_1, t_estimated1)
+    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
+    #Triangulate points for 4 possible solutions
+    P1_0 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
+    P2_0 = np.dot(K_c, np.concatenate((R_plus90_1, t_estimated), axis=1))
+    X_computed = triangulate_3D(x1, x2, P1_0, P2_0)
+    print("3D reconstructed sol 1:")
+    print(X_computed)
+    #plot_3D_sfm(X_computed, ensamble_T(R_plus90_1, t_estimated1), np.eye(4))
+    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+
+    P1_1 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
+    P2_1 = np.dot(K_c, np.concatenate((R_plus90_1, -t_estimated), axis=1))
+    X_computed = triangulate_3D(x1, x2, P1_1, P2_1)
+    #plot_3D_sfm(X_computed, ensamble_T(R_plus90_1, -t_estimated1), np.eye(4))
+    print("3D reconstructed sol 2:")
+    print(X_computed)
+    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+
+    T_c2_c1 = ensamble_T(R_minus90_1, t_estimated1)
+    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
+    P1_2 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
+    P2_2 = np.dot(K_c, np.concatenate((R_minus90_1, t_estimated), axis=1))
+    X_computed = triangulate_3D(x1, x2, P1_2, P2_2)
+    #plot_3D_sfm(X_computed, ensamble_T(R_minus90_1, t_estimated1), np.eye(4))
+    print("3D reconstructed sol 3:")
+    print(X_computed)
+    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+
+    P1_3 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
+    P2_3 = np.dot(K_c, np.concatenate((R_minus90_1, -t_estimated), axis=1))
+    X_computed = triangulate_3D(x1, x2, P1_3, P2_3)
+    #plot_3D_sfm(X_computed, ensamble_T(R_minus90_1, -t_estimated1), np.eye(4))
+    print("3D reconstructed sol 4:")
+    print(X_computed)
+    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+
+    #Exercise 3
 
 
 
