@@ -200,6 +200,46 @@ def plot_3D(X_computed, X_w, T_w_c1, T_w_c2):
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
 
+def point_transfer(x1FloorData, x2FloorData, H_2_1):
+
+    x2HomographyFloorData = np.dot(H_2_1, x1FloorData)
+    x2HomographyFloorData = x2HomographyFloorData / x2HomographyFloorData[2][:]
+
+    H_1_2 = np.linalg.inv(H_2_1)
+    x1HomographyFloorData = np.dot(H_1_2, x2FloorData)
+    x1HomographyFloorData = x1HomographyFloorData / x1HomographyFloorData[2][:]
+
+    print("Points transfer from using Homography:")
+    print(x2HomographyFloorData)
+
+    fig = plt.figure(6)
+
+    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x1FloorData[0, :], x1FloorData[1, :],'rx', markersize=10)
+    plt.plot(x1HomographyFloorData[0, :], x1HomographyFloorData[1, :],'bx', markersize=10)
+
+    plotNumberedImagePoints(x1FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    plotNumberedImagePoints(x1HomographyFloorData, 'b', (10,0)) # For plotting with numbers (choose one of the both options)
+
+    plt.title('Image 1')
+    plt.draw()  # We update the figure display
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+    fig = plt.figure(7)
+
+    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x2HomographyFloorData[0, :], x2HomographyFloorData[1, :],'bx', markersize=10)
+    plt.plot(x2FloorData[0, :], x2FloorData[1, :],'rx', markersize=10)
+
+    plotNumberedImagePoints(x2FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    plotNumberedImagePoints(x2HomographyFloorData, 'b', (10,0)) # For plotting with numbers (choose one of the both options)
+
+    plt.title('Image 2')
+    plt.draw()  # We update the figure display
+
+    print('Click in the image to continue...')
+    plt.waitforbuttonpress()
 
 def triangulate_3D(x1,x2,T_w_c1,T_w_c2):
 
@@ -464,6 +504,8 @@ if __name__ == '__main__':
     
     #Exercise 3
 
+    #Homography from camera callibration
+
     Pi_1 = np.array([[0.0149,0.9483,0.3171,-1.7257]]).T
     n = Pi_1[0:3].T
     print(n.shape)
@@ -474,39 +516,73 @@ if __name__ == '__main__':
     A = R_c2_c1 - np.dot(t_c2_c1, n) / d
 
     H_2_1 = np.linalg.multi_dot([K_c, A, np.linalg.inv(K_c)])
-    print("H21:")
-    print(H_2_1)
+
+    #3.2 Point transfer
 
     x1FloorData = np.loadtxt("x1FloorData.txt")
     x2FloorData = np.loadtxt("x2FloorData.txt")
-    x2HomographyFloorData = np.dot(H_2_1, x1FloorData)
-    x2HomographyFloorData = x2HomographyFloorData / x2HomographyFloorData[2][:]
+    point_transfer(x1FloorData, x2FloorData, H_2_1)
 
-    print("Points transfer from floor points in image 1 to points image 2:")
-    print(x2HomographyFloorData)
+    #Homography from matches
+    n_matches = x1FloorData.shape[1]
+    print("Floor point matches:")
+    print(n_matches)
 
-    fig = plt.figure(6)
+    A = np.zeros((n_matches*2, 9))
+    j = 0
+    for i in range(n_matches):
 
-    plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x1FloorData[0, :], x1FloorData[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x1FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    plt.title('Image 1')
-    plt.draw()  # We update the figure display
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
+        x_0 = x1FloorData[0][i]
+        x_1 = x2FloorData[0][i]
+        y_0 = x1FloorData[1][i]
+        y_1 = x2FloorData[1][i]
+        w_0 = 1.0
+        w_1 = 1.0
 
-    fig = plt.figure(7)
+        A[j][0] = x_0
+        A[j][1] = y_0
+        A[j][2] = 1.0
+        A[j][3] = 0.0
+        A[j][4] = 0.0
+        A[j][5] = 0.0
+        A[j][6] = -x_1*x_0
+        A[j][7] = -x_1*y_0
+        A[j][8] = -x_1
 
-    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x2HomographyFloorData[0, :], x2HomographyFloorData[1, :],'bx', markersize=10)
-    plt.plot(x2FloorData[0, :], x2FloorData[1, :],'rx', markersize=10)
+        A[j+1][0] = 0
+        A[j+1][1] = 0
+        A[j+1][2] = 0
+        A[j+1][3] = x_0
+        A[j+1][4] = y_0
+        A[j+1][5] = 1.0
+        A[j+1][6] = -y_1*x_0
+        A[j+1][7] = -y_1*y_0
+        A[j+1][8] = -y_1
 
-    plotNumberedImagePoints(x2FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    plt.title('Image 2')
-    plt.draw()  # We update the figure display
+        j = j+2
 
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
+    print(A.shape)
+    u, s, vh = np.linalg.svd(A)
+    H_matches_vector = np.reshape(vh[-1, :],(9,1))
+
+    H_21_matches = np.zeros((3,3))
+    H_21_matches[0][0] = H_matches_vector[0]
+    H_21_matches[0][1] = H_matches_vector[1]
+    H_21_matches[0][2] = H_matches_vector[2]
+    H_21_matches[1][0] = H_matches_vector[3]
+    H_21_matches[1][1] = H_matches_vector[4]
+    H_21_matches[1][2] = H_matches_vector[5]
+    H_21_matches[2][0] = H_matches_vector[6]
+    H_21_matches[2][1] = H_matches_vector[7]
+    H_21_matches[2][2] = H_matches_vector[8]
+
+    print("H21 from matches:")
+    print(H_21_matches)
+
+    point_transfer(x1FloorData, x2FloorData, H_21_matches)
+
+
+
 
 
 
