@@ -200,33 +200,23 @@ def plot_3D(X_computed, X_w, T_w_c1, T_w_c2):
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
 
-def plot_3D_sfm(X_computed, T_w_c1, T_w_c2):
-    ##Plot the 3D cameras and the 3D points
-    fig3D = plt.figure(4)
 
-    ax = plt.axes(projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+def triangulate_3D(x1,x2,T_w_c1,T_w_c2):
 
-    drawRefSystem(ax, T_w_c1, '-', 'C1')
-    drawRefSystem(ax, T_w_c2, '-', 'C2')
+    n_matches = x1.shape[1]
 
-    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
-    #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+    # Find P matrices
+    T_c1_w = np.linalg.inv(T_w_c1)
+    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
+    P1 = np.dot(K_c, P1)
+    print("P1 =")
+    print(P1)
 
-    ax.legend()
-
-    #Matplotlib does not correctly manage the axis('equal')
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
-
-
-def triangulate_3D(x1,x2,P1,P2):
+    T_c2_w = np.linalg.inv(T_w_c2)
+    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_w)
+    P2 = np.dot(K_c, P2)
+    print("P2 =")
+    print(P2)
 
     X_computed = np.zeros((4,len(X_w[0][:])))
 
@@ -291,68 +281,9 @@ if __name__ == '__main__':
     img1 = cv2.cvtColor(cv2.imread('image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread('image2.png'), cv2.COLOR_BGR2RGB)
 
-
-    # ##Plot the 3D cameras and the 3D points
-    # fig3D = plt.figure(3)
-
-    # ax = plt.axes(projection='3d', adjustable='box')
-    # ax.set_xlabel('X')
-    # ax.set_ylabel('Y')
-    # ax.set_zlabel('Z')
-
-    # drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    # drawRefSystem(ax, T_w_c1, '-', 'C1')
-    # drawRefSystem(ax, T_w_c2, '-', 'C2')
-
-    # ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.')
-    # plotNumbered3DPoints(ax, X_w, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
-
-    # #Matplotlib does not correctly manage the axis('equal')
-    # xFakeBoundingBox = np.linspace(0, 4, 2)
-    # yFakeBoundingBox = np.linspace(0, 4, 2)
-    # zFakeBoundingBox = np.linspace(0, 4, 2)
-    # plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    # print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    # plt.show()
-
-
-    # plt.figure(1)
-    # plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
-    # plt.plot(x1[0, :], x1[1, :],'rx', markersize=10)
-    # plotNumberedImagePoints(x1, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    # plt.title('Image 1')
-    # plt.draw()  # We update the figure display
-
-    # print('Click in the image to continue...')
-    # plt.waitforbuttonpress()
-
-    # plt.figure(2)
-    # plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
-    # plt.plot(x2[0, :], x2[1, :],'rx', markersize=10)
-    # plotNumberedImagePoints(x2, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
-    # plt.title('Image 2')
-    # plt.draw()  # We update the figure display
-    # print('Click in the image to continue...')
-    # plt.waitforbuttonpress()
-
     #Exercise 1
 
-    n_matches = x1.shape[1]
-
-    # Find P matrices
-    T_c1_w = np.linalg.inv(T_w_c1)
-    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
-    P1 = np.dot(K_c, P1)
-    print("P1 =")
-    print(P1)
-
-    T_c2_w = np.linalg.inv(T_w_c2)
-    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_w)
-    P2 = np.dot(K_c, P2)
-    print("P2 =")
-    print(P2)
-
-    X_computed = triangulate_3D(x1, x2, P1, P2)
+    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
     plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
 
     #Exercise 2
@@ -365,6 +296,7 @@ if __name__ == '__main__':
     draw_epipolar_line_img2(F_provided)
 
     #2.2
+    T_c2_w = np.linalg.inv(T_w_c2)
     T_c2_c1 = np.dot(T_c2_w,T_w_c1)
     print("T_c2_c1:")
     print(T_c2_c1)
@@ -501,41 +433,36 @@ if __name__ == '__main__':
 
     T_c2_c1 = ensamble_T(R_plus90_1, t_estimated1)
     T_w_c1 = np.dot(T_w_c2,T_c2_c1)
+    
     #Triangulate points for 4 possible solutions
-    P1_0 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
-    P2_0 = np.dot(K_c, np.concatenate((R_plus90_1, t_estimated), axis=1))
-    X_computed = triangulate_3D(x1, x2, P1_0, P2_0)
+
+    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
     print("3D reconstructed sol 1:")
     print(X_computed)
-    #plot_3D_sfm(X_computed, ensamble_T(R_plus90_1, t_estimated1), np.eye(4))
     plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
 
-    P1_1 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
-    P2_1 = np.dot(K_c, np.concatenate((R_plus90_1, -t_estimated), axis=1))
-    X_computed = triangulate_3D(x1, x2, P1_1, P2_1)
-    #plot_3D_sfm(X_computed, ensamble_T(R_plus90_1, -t_estimated1), np.eye(4))
+    T_c2_c1 = ensamble_T(R_plus90_1, -t_estimated1)
+    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
+    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
     print("3D reconstructed sol 2:")
     print(X_computed)
     plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
 
     T_c2_c1 = ensamble_T(R_minus90_1, t_estimated1)
     T_w_c1 = np.dot(T_w_c2,T_c2_c1)
-    P1_2 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
-    P2_2 = np.dot(K_c, np.concatenate((R_minus90_1, t_estimated), axis=1))
-    X_computed = triangulate_3D(x1, x2, P1_2, P2_2)
-    #plot_3D_sfm(X_computed, ensamble_T(R_minus90_1, t_estimated1), np.eye(4))
+    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
     print("3D reconstructed sol 3:")
     print(X_computed)
     plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
-
-    P1_3 = np.dot(K_c, np.concatenate((np.eye(3), np.zeros((3,1))), axis=1))
-    P2_3 = np.dot(K_c, np.concatenate((R_minus90_1, -t_estimated), axis=1))
-    X_computed = triangulate_3D(x1, x2, P1_3, P2_3)
-    #plot_3D_sfm(X_computed, ensamble_T(R_minus90_1, -t_estimated1), np.eye(4))
+    
+    T_c2_c1 = ensamble_T(R_minus90_1, -t_estimated1)
+    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
+    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
     print("3D reconstructed sol 4:")
     print(X_computed)
     plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
 
+    
     #Exercise 3
 
 
