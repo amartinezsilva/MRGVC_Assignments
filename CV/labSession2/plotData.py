@@ -21,6 +21,32 @@ import numpy as np
 import cv2
 
 
+def drawLine(l,strFormat,lWidth):
+    """
+    Draw a line
+    -input:
+      l: image line in homogenous coordinates
+      strFormat: line format
+      lWidth: line width
+    -output: None
+    """
+    # p_l_y is the intersection of the line with the axis Y (x=0)
+    p_l_y = np.array([0, -l[2] / l[1]])
+    # p_l_x is the intersection point of the line with the axis X (y=0)
+    p_l_x = np.array([-l[2] / l[0], 0])
+    # Draw the line segment p_l_x to  p_l_y
+    plt.plot([p_l_y[0], p_l_x[0]], [p_l_y[1], p_l_x[1]], strFormat, linewidth=lWidth)
+
+def draw_epipole_im2(e2):
+
+    fig = plt.figure(6)
+    plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
+    plt.plot(e2[0, :], e2[1, :],'rx', markersize=10)
+    plt.title('Epipole Image 2')
+    plt.draw()  # We update the figure display
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
 
 def draw_epipolar_line_img2(F):
 
@@ -33,8 +59,8 @@ def draw_epipolar_line_img2(F):
     plt.draw()  # We update the figure display
     cid = fig.canvas.mpl_connect('button_press_event', lambda event: mouse_event_img1(event, F)) #compute line and plot in image 2
 
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
     
 
 def mouse_event_img1(event, F):
@@ -60,22 +86,6 @@ def computeline_img2(point, F):
 
     print('Click in the image to continue...')
     plt.waitforbuttonpress()
-
-def drawLine(l,strFormat,lWidth):
-    """
-    Draw a line
-    -input:
-      l: image line in homogenous coordinates
-      strFormat: line format
-      lWidth: line width
-    -output: None
-    """
-    # p_l_y is the intersection of the line with the axis Y (x=0)
-    p_l_y = np.array([0, -l[2] / l[1]])
-    # p_l_x is the intersection point of the line with the axis X (y=0)
-    p_l_x = np.array([-l[2] / l[0], 0])
-    # Draw the line segment p_l_x to  p_l_y
-    plt.plot([p_l_y[0], p_l_x[0]], [p_l_y[1], p_l_x[1]], strFormat, linewidth=lWidth)
 
 # Ensamble T matrix
 def ensamble_T(R_w_c, t_w_c) -> np.array:
@@ -240,8 +250,28 @@ def point_transfer(x1FloorData, x2FloorData, H_2_1):
     plt.title('Point transfer Image 2')
     plt.draw()  # We update the figure display
 
-    print('Click in the image to continue...')
-    plt.waitforbuttonpress()
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+    mean_error1 = 0.0
+    mean_error2 = 0.0
+
+    for i in range(x1FloorData.shape[1]):
+        ex1 = x1FloorData[0][i] - x1HomographyFloorData[0][i]
+        ey1 = x1FloorData[1][i] - x1HomographyFloorData[1][i]
+        mean_error1 = mean_error1 + np.sqrt(ex1*ex1 + ey1*ey1)
+        ex2 = x2FloorData[0][i] - x2HomographyFloorData[0][i]
+        ey2 = x2FloorData[1][i] - x2HomographyFloorData[1][i]
+        mean_error2 = mean_error2 + np.sqrt(ex2*ex2 + ey2*ey2)
+
+    mean_error1 = mean_error1 / x1FloorData.shape[1]
+    print("Mean error image 1:")
+    print(mean_error1)
+    mean_error2 = mean_error2 / x2FloorData.shape[1]
+    print("Mean error image 2:")
+    print(mean_error2)
+
+
 
 def triangulate_3D(x1,x2,T_w_c1,T_w_c2):
 
@@ -337,12 +367,12 @@ if __name__ == '__main__':
     u, s, vh = np.linalg.svd(F_provided)
     e1 = np.reshape(vh[-1, :],(3,1))
     e1 = e1 / e1[2,:]
-    print("Epipole 1:")
+    print("Epipole 1 - optical centre of C2 in C1:")
     print(e1)
     u, s, vh = np.linalg.svd(F_provided.T)
     e2 = np.reshape(vh[-1, :],(3,1))
     e2 = e2 / e2[2,:]
-    print("Epipole 2:")
+    print("Epipole 2 - optical centre of C1 in C2:")
     print(e2)
 
     draw_epipolar_line_img2(F_provided)
@@ -388,8 +418,21 @@ if __name__ == '__main__':
     print("Funtamental matrix F:")
     print(F_computed)
 
+    u, s, vh = np.linalg.svd(F_computed)
+    e1 = np.reshape(vh[-1, :],(3,1))
+    e1 = e1 / e1[2,:]
+    print("Epipole 1 - optical centre of C2 in C1:")
+    print(e1)
+    u, s, vh = np.linalg.svd(F_computed.T)
+    e2 = np.reshape(vh[-1, :],(3,1))
+    e2 = e2 / e2[2,:]
+    print("Epipole 2 - optical centre of C1 in C2:")
+    print(e2)
+
     #Draw lines with estimated F
     draw_epipolar_line_img2(F_computed)
+
+    draw_epipole_im2(e2)
 
     #2.3
     n_matches = x1.shape[1]
@@ -496,6 +539,17 @@ if __name__ == '__main__':
 
         X_computed = triangulate_3D(x1, x2, T_w_to_c1, T_w_c2)
 
+        mean_error = 0.0
+        for i in range(X_w.shape[1]):
+                ex = X_w[0][i] - X_computed[0][i]
+                ey = X_w[1][i] - X_computed[1][i]
+                ez = X_w[2][i] - X_computed[2][i]
+                mean_error = mean_error + np.sqrt(ex*ex + ey*ey + ez*ez)
+        mean_error = mean_error / X_w.shape[1]
+
+        print("Mean error:")
+        print(mean_error)
+
         # Now, visualize the results for this solution
         fig3D = plt.figure(idx+6)
 
@@ -529,10 +583,8 @@ if __name__ == '__main__':
 
     Pi_1 = np.array([[0.0149,0.9483,0.3171,-1.7257]]).T
     n = Pi_1[0:3].T
-    print(n.shape)
     d = Pi_1[-1]
     t_c2_c1 = np.reshape(t_c2_c1, (3,1))
-    print(t_c2_c1.shape)
 
     A = R_c2_c1 - np.dot(t_c2_c1, n) / d
 
