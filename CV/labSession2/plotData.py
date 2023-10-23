@@ -215,13 +215,14 @@ def point_transfer(x1FloorData, x2FloorData, H_2_1):
     fig = plt.figure(6)
 
     plt.imshow(img1, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x1FloorData[0, :], x1FloorData[1, :],'rx', markersize=10)
-    plt.plot(x1HomographyFloorData[0, :], x1HomographyFloorData[1, :],'bx', markersize=10)
+    plt.plot(x1FloorData[0, :], x1FloorData[1, :],'rx', markersize=10,label = 'provided')
+    plt.plot(x1HomographyFloorData[0, :], x1HomographyFloorData[1, :],'bx', markersize=10, label='homography')
+    plt.legend()
 
     plotNumberedImagePoints(x1FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
     plotNumberedImagePoints(x1HomographyFloorData, 'b', (10,0)) # For plotting with numbers (choose one of the both options)
 
-    plt.title('Image 1')
+    plt.title('Point transfer Image 1')
     plt.draw()  # We update the figure display
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
@@ -229,13 +230,14 @@ def point_transfer(x1FloorData, x2FloorData, H_2_1):
     fig = plt.figure(7)
 
     plt.imshow(img2, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x2HomographyFloorData[0, :], x2HomographyFloorData[1, :],'bx', markersize=10)
-    plt.plot(x2FloorData[0, :], x2FloorData[1, :],'rx', markersize=10)
+    plt.plot(x2HomographyFloorData[0, :], x2HomographyFloorData[1, :],'bx', markersize=10, label='homography')
+    plt.plot(x2FloorData[0, :], x2FloorData[1, :],'rx', markersize=10, label = 'provided')
+    plt.legend()
 
     plotNumberedImagePoints(x2FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
     plotNumberedImagePoints(x2HomographyFloorData, 'b', (10,0)) # For plotting with numbers (choose one of the both options)
 
-    plt.title('Image 2')
+    plt.title('Point transfer Image 2')
     plt.draw()  # We update the figure display
 
     print('Click in the image to continue...')
@@ -332,6 +334,16 @@ if __name__ == '__main__':
     F_provided = np.loadtxt('F_21_test.txt')
     print("F provided:")
     print(F_provided)
+    u, s, vh = np.linalg.svd(F_provided)
+    e1 = np.reshape(vh[-1, :],(3,1))
+    e1 = e1 / e1[2,:]
+    print("Epipole 1:")
+    print(e1)
+    u, s, vh = np.linalg.svd(F_provided.T)
+    e2 = np.reshape(vh[-1, :],(3,1))
+    e2 = e2 / e2[2,:]
+    print("Epipole 2:")
+    print(e2)
 
     draw_epipolar_line_img2(F_provided)
 
@@ -426,85 +438,94 @@ if __name__ == '__main__':
 
     #2.4
 
-    E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
+    # E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
+    E = np.linalg.multi_dot([K_c.T,F_provided,K_c])
+
     print("Computed E from F:")
     print(E)
 
     u, s, vh = np.linalg.svd(E)
-    t_estimated = np.reshape(u[-1,:], (3,1))
-    t_estimated1 = u[-1,:]
+
+    t_estimated = u[:,2]
     print("Estimated t:")
     print(t_estimated)
 
-    W = np.zeros((3,3))
-    W[0][0] = 0
-    W[0][1] = -1
-    W[0][2] = 0
-    W[1][0] = 1
-    W[1][1] = 0
-    W[1][2] = 0
-    W[2][0] = 0
-    W[2][1] = 0
-    W[2][2] = 1
+    W = np.array([[0, -1, 0],
+                [1, 0, 0],
+                [0, 0, 1]])
 
-    R_plus90_1 = np.linalg.multi_dot([u,W,vh.T])
-    R_plus90_2 = - np.linalg.multi_dot([u,W,vh.T])
-    R_minus90_1 = np.linalg.multi_dot([u,W.T,vh.T])
-    R_minus90_2 = - np.linalg.multi_dot([u,W.T,vh.T])
+    R_plus90_positive = np.linalg.multi_dot([u,W,vh.T])
+    R_plus90_negative = - np.linalg.multi_dot([u,W,vh.T])
+    R_minus90_positive = np.linalg.multi_dot([u,W.T,vh.T])
+    R_minus90_negative = - np.linalg.multi_dot([u,W.T,vh.T])
 
     print("Four possible solutions:")
     print("R_90:")
-    print(R_plus90_1)
+    print(R_plus90_positive)
     print("Determinant:")
-    print(np.linalg.det(R_plus90_1))  #det=1
+    print(np.linalg.det(R_plus90_positive))  #det=-1
     print("-R_90:")
     print("Determinant:")
-    print(np.linalg.det(R_plus90_2)) #det=-1
+    print(np.linalg.det(R_plus90_negative)) #det=1
     print("R_-90:")
-    print(R_minus90_1) 
+    print(R_minus90_positive) 
     print("Determinant:")
-    print(np.linalg.det(R_minus90_1)) #det=1
+    print(np.linalg.det(R_minus90_positive)) #det=-1
     print("-R_-90:")
-    print(R_minus90_2)
+    print(R_minus90_negative)
     print("Determinant:")
-    print(np.linalg.det(R_minus90_2)) #det=-1
+    print(np.linalg.det(R_minus90_negative)) #det=1
 
-    #Possible solutions R_plus90_1, R_minus90_1 (with +-t) -> 4 cases
+    # #Possible solutions -R_90, -R_-90 (with +-t) -> 4 cases
     
-    #Triangulate points for 4 possible solutions
+    # #Triangulate points for 4 possible solutions
 
-    T_c2_c1 = ensamble_T(R_plus90_1, t_estimated1)
-    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
-    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
-    print("3D reconstructed sol 1:")
-    print(X_computed)
-    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+    R1 = R_plus90_negative
+    R2 = R_minus90_negative
+    # # Four possible combinations of R and t
+    poses = [(R1, t_estimated), (R1, -t_estimated), (R2, t_estimated), (R2, -t_estimated)]
 
-    T_c2_c1 = ensamble_T(R_plus90_1, -t_estimated1)
-    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
-    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
-    print("3D reconstructed sol 2:")
-    print(X_computed)
-    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+    for idx, (R, t) in enumerate(poses):
+        T_c2_to_c1 = np.eye(4)
+        T_c2_to_c1[:3, :3] = R
+        T_c2_to_c1[:3, 3] = t
+        T_c2_to_c1[3, 3] = 1
+        T_w_to_c1 = np.dot(T_w_c2, T_c2_to_c1)
+        print("R and t solution")
+        print(T_w_to_c1)
 
-    T_c2_c1 = ensamble_T(R_minus90_1, t_estimated1)
-    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
-    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
-    print("3D reconstructed sol 3:")
-    print(X_computed)
-    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
-    
-    T_c2_c1 = ensamble_T(R_minus90_1, -t_estimated1)
-    T_w_c1 = np.dot(T_w_c2,T_c2_c1)
-    X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
-    print("3D reconstructed sol 4:")
-    print(X_computed)
-    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+        X_computed = triangulate_3D(x1, x2, T_w_to_c1, T_w_c2)
+
+        # Now, visualize the results for this solution
+        fig3D = plt.figure(idx+6)
+
+        ax = plt.axes(projection='3d', adjustable='box')
+        ax.set_xlabel('X')
+        ax.set_ylabel('Y')
+        ax.set_zlabel('Z')
+
+        drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+        drawRefSystem(ax, T_w_to_c1, '-', 'C1')
+        drawRefSystem(ax, T_w_c2, '-', 'C2')
+
+        ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', color = 'blue', label = 'triangulated')
+        ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], color='red', marker='.', label = 'ground truth')
+        ax.legend()
+        #plotNumbered3DPoints(ax, X_w_calculated, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+        #Matplotlib does not correctly manage the axis('equal')
+        xFakeBoundingBox = np.linspace(0, 4, 2)
+        yFakeBoundingBox = np.linspace(0, 4, 2)
+        zFakeBoundingBox = np.linspace(0, 4, 2)
+        plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+        plt.title(f'Solution {idx+1}')
+        print('Close the figure to continue. Left button for orbit, right button for zoom.')
+        plt.show()
 
     
     #Exercise 3
 
-    #Homography from camera callibration
+    #3.1 Homography from camera callibration
 
     Pi_1 = np.array([[0.0149,0.9483,0.3171,-1.7257]]).T
     n = Pi_1[0:3].T
@@ -523,7 +544,7 @@ if __name__ == '__main__':
     x2FloorData = np.loadtxt("x2FloorData.txt")
     point_transfer(x1FloorData, x2FloorData, H_2_1)
 
-    #Homography from matches
+    #3.3 Homography from matches
     n_matches = x1FloorData.shape[1]
     print("Floor point matches:")
     print(n_matches)
