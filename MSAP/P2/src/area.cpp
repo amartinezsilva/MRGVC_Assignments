@@ -76,18 +76,12 @@ public:
 		lRec.n = n;
 		lRec.uv = uv;
 
-		// Compute the probability density of the sampled point
-		float pS = m_mesh->pdf(p);
-
-		// Convert positional pdf to solid angle pdf
-		float distance = (lRec.p - lRec.ref).norm();
-		float pA = pS * (distance * distance) / std::abs(lRec.n.dot(lRec.wi));
-
 		// Compute the radiance
 		Color3f radiance = m_radiance->eval(uv);
 
 		// Return the radiance weighted by the probability
-		return radiance * m_scale / pA;
+		// return radiance * m_scale;
+		return radiance;
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -98,7 +92,14 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		throw NoriException("AreaEmitter::pdf() is not yet implemented!");
+		// Compute the probability density of the sampled point
+		float pS = m_mesh->pdf(lRec.p);
+
+		// Convert positional pdf to solid angle pdf
+		float distance = (lRec.p - lRec.ref).norm();
+		float pA = pS * (distance * distance) / std::abs(lRec.n.dot(lRec.wi));
+		
+		return pA;
 	}
 
 

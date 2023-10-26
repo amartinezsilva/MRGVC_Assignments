@@ -46,14 +46,6 @@ void Mesh::activate() {
     }
 
     m_pdf.reserve(m_F.cols());
-
-    // Initialize m_pdf for triangle sampling
-    for (n_UINT i = 0; i < m_F.cols(); ++i) {
-        float area = surfaceArea(i);
-        m_pdf.append(area);
-    }
-
-    m_pdf.normalize();
 }
 
 float Mesh::surfaceArea(n_UINT index) const {
@@ -126,9 +118,8 @@ Point3f Mesh::getCentroid(n_UINT index) const {
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
     float sampleValue = sample[0];
-    n_UINT triIndex = m_pdf.sampleReuse(sampleValue);
-    n_UINT i0 = m_F(0, triIndex), i1 = m_F(1, triIndex), i2 = m_F(2, triIndex);
-    const Point3f p0 = m_V.col(i0), p1 = m_V.col(i1), p2 = m_V.col(i2);
+    m_pdf.sampleReuse(sampleValue);
+    n_UINT i0 = m_F(0, sampleValue), i1 = m_F(1, sampleValue), i2 = m_F(2, sampleValue);
 
     //sample position on triangule
     Point2f barycentric_coords = Warp::squareToUniformTriangle(sample);
@@ -138,27 +129,35 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
     float gamma = 1.0f - alpha - beta;
 
     // Compute the sampled position
-    p = alpha * m_V.col(m_F(0, 0)) + beta * m_V.col(m_F(1, 0)) + gamma * m_V.col(m_F(2, 0));
+    p = alpha * m_V.col(i0) + beta * m_V.col(i1) + gamma * m_V.col(i2);
 
     // Compute the sampled normal
     if (m_N.size() > 0) {
-        n = alpha * m_N.col(m_F(0, 0)) + beta * m_N.col(m_F(1, 0)) + gamma * m_N.col(m_F(2, 0));
+        n = alpha * m_N.col(i0) + beta * m_N.col(i1) + gamma * m_N.col(i2);
     }
     // Compute the sampled uv coordinates
     if (m_UV.size() > 0) {
-        uv = alpha * m_UV.col(m_F(0, 0)) + beta * m_UV.col(m_F(1, 0)) + gamma * m_UV.col(m_F(2, 0));	
+        uv = alpha * m_UV.col(i0) + beta * m_UV.col(i1) + gamma * m_UV.col(i2);	
     }
 }
 
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
-	float totalArea = 0.0f;
-    for (n_UINT i = 0; i < m_F.cols(); ++i) {
-        totalArea += surfaceArea(i);
-    }
+        // Initialize m_pdf for triangle sampling
+    // for (n_UINT i = 0; i < m_F.cols(); ++i) {
+    //     float area = surfaceArea(i);
+    // }
+    float meshArea = m_pdf.getNormalization();
 
-    return 1.0f / totalArea;
+    
+
+	// float totalArea = 0.0f;
+    // for (n_UINT i = 0; i < m_F.cols(); ++i) {
+    //     totalArea += surfaceArea(i);
+    // }
+
+    return 1.0f / meshArea;
 }
 
 
