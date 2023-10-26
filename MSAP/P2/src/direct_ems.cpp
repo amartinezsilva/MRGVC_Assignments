@@ -31,6 +31,18 @@ public:
 
 		float pdfpositionlight = emitterRecord.pdf;
 
+		// Here perform a visibility query, to check whether the light 
+		// source "em" is visible from the intersection point. 
+		// For that, we create a ray object (shadow ray),
+		// and compute the intersection
+		
+		Ray3f shadow_ray(its.p, emitterRecord.wi);
+
+		Intersection shadowIntersection;
+		if (scene->rayIntersect(shadow_ray, shadowIntersection)){
+			return Lo;
+		}
+
 		// Finally, we evaluate the BSDF. For that, we need to build
 		// a BSDFQueryRecord from the outgoing direction (the direction
 		// of the primary ray, in ray.d), and the incoming direction 
