@@ -26,7 +26,6 @@
 #include <nori/emitter.h>
 #include <nori/warp.h>
 #include <Eigen/Geometry>
-#include <nori/dpdf.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -46,6 +45,12 @@ void Mesh::activate() {
     }
 
     m_pdf.reserve(m_F.cols());
+
+    for(uint32_t i = 0 ; i < m_F.cols() ; ++i) {
+        m_pdf.append(surfaceArea(i));
+    }
+
+    m_pdf.normalize();
 }
 
 float Mesh::surfaceArea(n_UINT index) const {
@@ -113,13 +118,12 @@ Point3f Mesh::getCentroid(n_UINT index) const {
  * \brief Uniformly sample a position on the mesh with
  * respect to surface area. Returns both position and normal
  */
-
-
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
+	
     float sampleValue = sample[0];
-    m_pdf.sampleReuse(sampleValue);
-    n_UINT i0 = m_F(0, sampleValue), i1 = m_F(1, sampleValue), i2 = m_F(2, sampleValue);
+    size_t triIndex = m_pdf.sampleReuse(sampleValue);
+    int i0 = m_F(0, triIndex), i1 = m_F(1, triIndex), i2 = m_F(2, triIndex);
 
     //sample position on triangule
     Point2f barycentric_coords = Warp::squareToUniformTriangle(sample);
@@ -133,31 +137,33 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
 
     // Compute the sampled normal
     if (m_N.size() > 0) {
-        n = alpha * m_N.col(i0) + beta * m_N.col(i1) + gamma * m_N.col(i2);
+        n = alpha * m_N.col(i0) + beta * m_N.col(i1) + gamma * m_N.col(i2).normalized();
+    }
+    else{
+        Point3f p0 = m_V.col(m_F(0, triIndex));
+        Point3f p1 = m_V.col(m_F(1, triIndex));
+        Point3f p2 = m_V.col(m_F(2, triIndex));
+        n = (p1-p0).cross(p2-p0).normalized();
     }
     // Compute the sampled uv coordinates
+    const MatrixXf &m_UV = this->getVertexTexCoords();
+
     if (m_UV.size() > 0) {
         uv = alpha * m_UV.col(i0) + beta * m_UV.col(i1) + gamma * m_UV.col(i2);	
     }
+
+    return;
+    //throw NoriException("Mesh::samplePosition() is not yet implemented!");	
 }
 
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
-        // Initialize m_pdf for triangle sampling
-    // for (n_UINT i = 0; i < m_F.cols(); ++i) {
-    //     float area = surfaceArea(i);
-    // }
+
     float meshArea = m_pdf.getNormalization();
-
-    
-
-	// float totalArea = 0.0f;
-    // for (n_UINT i = 0; i < m_F.cols(); ++i) {
-    //     totalArea += surfaceArea(i);
-    // }
-
-    return 1.0f / meshArea;
+	
+	return meshArea;
+    //throw NoriException("Mesh::pdf() is not yet implemented!");	
 }
 
 

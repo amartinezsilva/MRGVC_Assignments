@@ -51,36 +51,34 @@ public:
 		// This function call can be done by bsdf sampling routines.
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		
-		// Check if the outgoing direction is above the emitting hemisphere
-		if (lRec.wi.dot(lRec.n) <= 0.0f)
-			return Color3f(0.0f);
+		Color3f radiance;
 
+		radiance = (lRec.wi.dot(lRec.n) < 0.0f) * m_radiance->eval(lRec.uv);
 		// Use the radiance texture to get the radiance
-		Point2f uv; // You need to compute the UV coordinates based on lRec
-		return m_radiance->eval(uv);
+		return radiance;
+		//throw NoriException("AreaEmitter::eval() is not yet implemented!");
 	}
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		// Sample a point on the mesh and get its normal and UV coordinates
 		Point3f p;
 		Normal3f n;
 		Point2f uv;
 		m_mesh->samplePosition(sample, p, n, uv);
 
-		// Set the point, normal, and UV coordinates in lRec
 		lRec.p = p;
 		lRec.n = n;
+		lRec.wi = (lRec.p - lRec.ref).normalized();
 		lRec.uv = uv;
+		lRec.pdf = pdf(lRec);
 
-		// Compute the radiance
-		Color3f radiance = m_radiance->eval(uv);
+		Color3f radiance(0.0f);
+		if(lRec.pdf > 0.0f){
+			radiance = eval(lRec) / lRec.pdf;
+		}
 
-		// Return the radiance weighted by the probability
-		// return radiance * m_scale;
 		return radiance;
 	}
 
@@ -92,14 +90,12 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		// Compute the probability density of the sampled point
 		float pS = m_mesh->pdf(lRec.p);
-
 		// Convert positional pdf to solid angle pdf
 		float distance = (lRec.p - lRec.ref).norm();
-		float pA = pS * (distance * distance) / std::abs(lRec.n.dot(lRec.wi));
-		
+		float pA = pS * (distance * distance) / std::abs(lRec.n.dot(-lRec.wi));
 		return pA;
+		//throw NoriException("AreaEmitter::pdf() is not yet implemented!");
 	}
 
 
