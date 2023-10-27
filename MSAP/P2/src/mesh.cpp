@@ -120,13 +120,12 @@ Point3f Mesh::getCentroid(n_UINT index) const {
  */
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
-	
-    float sampleValue = sample[0];
-    size_t triIndex = m_pdf.sampleReuse(sampleValue);
-    int i0 = m_F(0, triIndex), i1 = m_F(1, triIndex), i2 = m_F(2, triIndex);
+	Point2f new_sample = sample;
+    size_t triIndex = m_pdf.sampleReuse(new_sample.x());
+    uint32_t i0 = m_F(0, triIndex), i1 = m_F(1, triIndex), i2 = m_F(2, triIndex);
 
     //sample position on triangule
-    Point2f barycentric_coords = Warp::squareToUniformTriangle(sample);
+    Point2f barycentric_coords = Warp::squareToUniformTriangle(new_sample);
     
 	float alpha = barycentric_coords[0];
     float beta = barycentric_coords[1];
@@ -146,10 +145,12 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
         n = (p1-p0).cross(p2-p0).normalized();
     }
     // Compute the sampled uv coordinates
-    const MatrixXf &m_UV = this->getVertexTexCoords();
-
     if (m_UV.size() > 0) {
         uv = alpha * m_UV.col(i0) + beta * m_UV.col(i1) + gamma * m_UV.col(i2);	
+    }
+    else
+    {
+        uv = Point2f(0.0f);
     }
 
     return;
