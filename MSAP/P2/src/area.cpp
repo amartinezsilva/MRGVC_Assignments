@@ -51,19 +51,23 @@ public:
 		// This function call can be done by bsdf sampling routines.
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		Color3f radiance;
 
 		//std::cout << "eval check" << (lRec.n.dot(lRec.wi) > 0.0f) << std::endl;
 		//
 		if (lRec.n.dot(lRec.wi) < 0.0f) {
-			//std::cout << "eval check" << (lRec.n.dot(lRec.wi) > 0.0f) << std::endl;
-			radiance = m_radiance->eval(lRec.uv) * M_PI;
+			// Evaluate the radiance of the area light based on the texture coordinates
+			if (m_radiance)
+			// Use the texture coordinates in rec to evaluate the radiance
+				return m_radiance->eval(lRec.uv)*M_PI;
+			else
+				// If no texture is assigned, use the constant radiance value
+				return Color3f(0.0f);
 		} else {
-			radiance = Color3f(0.0f); // Set to zero or any other desired value
+			return Color3f(0.0f); // Set to zero or any other desired value
 		}
 		
 		// Use the radiance texture to get the radiance
-		return radiance;
+		
 		//throw NoriException("AreaEmitter::eval() is not yet implemented!");
 	}
 
@@ -74,7 +78,7 @@ public:
 		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
 
 		lRec.dist = (lRec.p - lRec.ref).norm();
-		lRec.wi = (lRec.p - lRec.ref).normalized();
+		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
 
 		//std::cout << "eval check" << pdf(lRec) << std::endl;
 		//std::cout << "eval check" << lRec.p << std::endl;
@@ -96,7 +100,7 @@ public:
         float pS = m_mesh->pdf(lRec.p);
 		// Convert positional pdf to solid angle pdf
 
-		float squareDistance = (lRec.p - lRec.ref).squaredNorm();
+		float squareDistance = pow(lRec.dist,2);
 		float pA = pS * (squareDistance) / cosTheta;
 		return pA;
 	}
