@@ -44,6 +44,9 @@ void Mesh::activate() {
             NoriObjectFactory::createInstance("diffuse", PropertyList()));
     }
 
+    // m_pdf is already a DiscretePDF
+    m_pdf.reserve(m_F.cols());
+
     for(uint32_t i = 0 ; i < m_F.cols() ; ++i) {
         m_pdf.append(surfaceArea(i));
     }
@@ -119,7 +122,9 @@ Point3f Mesh::getCentroid(n_UINT index) const {
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
 	Point2f new_sample = sample;
-    size_t triIndex = m_pdf.sampleReuse(new_sample.x());
+
+    size_t triIndex = m_pdf.sampleReuse(new_sample(0));
+
     uint32_t i0 = m_F(0, triIndex), i1 = m_F(1, triIndex), i2 = m_F(2, triIndex);
 
     //sample position on triangule

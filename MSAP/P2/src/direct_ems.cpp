@@ -33,7 +33,18 @@ public:
 
 		Color3f Le = random_emitter->sample(emitterRecord, sampler->next2D(), 0.);
 
+		// Check if intersected material is emitter
+		if(its.mesh->isEmitter()){
+			emitterRecord.ref = ray.o;
+			emitterRecord.wi = -ray.d;
+			emitterRecord.n = its.shFrame.n;
+			return its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
+		}
+
 		Ray3f shadow_ray(its.p, emitterRecord.wi);
+		// shadowRay.maxt is set to the distance between the intersection point its.p and the position of the light source emitterRecord.p, normalized by .norm().
+		// This step ensures that the shadow ray's maximum length is set to the distance to the light source, so it won't overshoot the light source.
+		shadow_ray.maxt = (emitterRecord.p - its.p).norm();
 		Intersection shadowIntersection;
 		if (scene->rayIntersect(shadow_ray, shadowIntersection)){
 			return Lo;
@@ -54,19 +65,11 @@ public:
 		// foreshortening times the BSDF term (i.e. the render equation). 
 		Lo += Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
 
-		// Check if intersected material is emitter
-		if(its.mesh->isEmitter()){
-			emitterRecord.ref = ray.o;
-			emitterRecord.wi = -ray.d;
-			emitterRecord.n = its.shFrame.n;
-			return its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
-		}
-
 		return Lo;
 	}
 
 	std::string toString() const {
-		return "Direct Whitted Integrator []";
+		return "DirectEmitterSampling[]";
 	}
 };
 
