@@ -3,12 +3,16 @@
 #include <nori/scene.h>
 #include <nori/emitter.h>
 #include <nori/bsdf.h>
+#include <iostream>
+#include <cmath>
 
 NORI_NAMESPACE_BEGIN
 
-class DirectEmitterSamplingIntegrator: public Integrator {
+class DirectEmitterSampling: public Integrator {
+private:
+
 public:
-	DirectEmitterSamplingIntegrator(const PropertyList& props) {
+	DirectEmitterSampling(const PropertyList& props) {
 		/* No parameters this time */
 	}
 
@@ -27,52 +31,44 @@ public:
 		// Sample random light source
 		const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), pdflight);
 
-		Color3f Le = random_emitter->sample(emitterRecord, sampler->next2D(), sampler->next1D());
+		Color3f Le = random_emitter->sample(emitterRecord, sampler->next2D(), 0.);
 
-		float pdfpositionlight = emitterRecord.pdf;
-
-		// Here perform a visibility query, to check whether the light 
-		// source "em" is visible from the intersection point. 
-		// For that, we create a ray object (shadow ray),
-		// and compute the intersection
-		
 		Ray3f shadow_ray(its.p, emitterRecord.wi);
-
 		Intersection shadowIntersection;
 		if (scene->rayIntersect(shadow_ray, shadowIntersection)){
 			return Lo;
 		}
 
-		// Finally, we evaluate the BSDF. For that, we need to build
-		// a BSDFQueryRecord from the outgoing direction (the direction
-		// of the primary ray, in ray.d), and the incoming direction 
-		// (the direction to the light source, in emitterRecord.wi). 
-		// Note that: a) the BSDF assumes directions in the local frame
-		// of reference; and b) that both the incoming and outgoing 
-		// directions are assumed to start from the intersection point. 	
-		BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d), 
-							its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
+		float pdfpositionlight = random_emitter->pdf(emitterRecord);
+
+		// Here perform a visibility query, to check whether the light 
+		// source "em" is visible from the intersection point. 
+		// For that, we create a ray object (shadow ray),
+		// and compute the intersection
+ 
+		BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
+        Color3f fr = its.mesh->getBSDF()->eval(bsdfRecord);
+        float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);	
 
 		// For each light, we accomulate the incident light times the 
 		// foreshortening times the BSDF term (i.e. the render equation). 
-		Lo += Le * its.shFrame.n.dot(emitterRecord.wi) * 
-							its.mesh->getBSDF()->eval(bsdfRecord);
-		
-		Lo = Lo / (pdflight*pdfpositionlight);
+		Lo += Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
 
 		// Check if intersected material is emitter
 		if(its.mesh->isEmitter()){
-			EmitterQueryRecord emitterRecordMaterial;
-			Lo += its.mesh->getEmitter()->eval(emitterRecordMaterial);
+			emitterRecord.ref = ray.o;
+			emitterRecord.wi = -ray.d;
+			emitterRecord.n = its.shFrame.n;
+			return its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
 		}
 
 		return Lo;
 	}
 
 	std::string toString() const {
-		return "Direct Emitter Sampling Integrator []";
+		return "Direct Whitted Integrator []";
 	}
 };
 
-NORI_REGISTER_CLASS(DirectEmitterSamplingIntegrator, "direct_ems");
+NORI_REGISTER_CLASS(DirectEmitterSampling, "direct_ems");
 NORI_NAMESPACE_END
