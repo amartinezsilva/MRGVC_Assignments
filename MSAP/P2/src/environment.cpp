@@ -79,7 +79,6 @@ public:
 	}
 
 	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
-<<<<<<< HEAD
 				
 		Point3f position = Point3f(0, 0, 0);
 		float r = 10.f;
@@ -87,14 +86,7 @@ public:
         lRec.p = position + r*lRec.wi;
         lRec.n = -lRec.wi;
         lRec.pdf = pdf(lRec);
-=======
-		lRec.wi = Warp::squareToUniformSphere(sample);
-		lRec.p = 10 * lRec.wi;
-        lRec.n = lRec.wi;
 
-		lRec.pdf = pdf(lRec);	
-		// Return the radiance value
->>>>>>> 74595eff0790c97980e278c278bae853c5dbb65c
 		return eval(lRec);
 	}
 
@@ -102,15 +94,11 @@ public:
 	// Assumes all information about the intersection point is already provided inside.
 	// WARNING: Use with care. Malformed EmitterQueryRecords can result in undefined behavior. Plus no visibility is considered.
 	virtual float pdf(const EmitterQueryRecord& lRec) const {
-<<<<<<< HEAD
 		// Since you're sampling uniformly on the sphere, the pdf is constant
     	// You can use the pdf function from the Warp class for the squareToUniformSphere function
 		float r = 10.f;
  		return std::pow(1.0f/r,2) * Warp::squareToUniformSpherePdf(lRec.wi);
 
-=======
-    	return std::pow(1.f/10,2)*Warp::squareToUniformSpherePdf(lRec.wi);
->>>>>>> 74595eff0790c97980e278c278bae853c5dbb65c
 	}
 
 
