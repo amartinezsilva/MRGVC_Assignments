@@ -91,7 +91,7 @@ public:
 		if (distance_to_target < minimum_distance){
 
 			if (currentTarget == targets.size() - 1){
-				cout << "Final goal reached!" << '\n';
+				ROS_INFO_STREAM_ONCE("Final goal reached!");
 				return;
 			}
 	
