@@ -51,11 +51,23 @@ public:
 		// This function call can be done by bsdf sampling routines.
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-		Color3f radiance;
 
-		radiance = (lRec.wi.dot(lRec.n) < 0.0f) * m_radiance->eval(lRec.uv);
+		//std::cout << "eval check" << (lRec.n.dot(lRec.wi) > 0.0f) << std::endl;
+		//
+		if (lRec.n.dot(lRec.wi) < 0.0f) {
+			// Evaluate the radiance of the area light based on the texture coordinates
+			if (m_radiance)
+			// Use the texture coordinates in rec to evaluate the radiance
+				return m_radiance->eval(lRec.uv)*M_PI;
+			else
+				// If no texture is assigned, use the constant radiance value
+				return Color3f(0.0f);
+		} else {
+			return Color3f(0.0f); // Set to zero or any other desired value
+		}
+		
 		// Use the radiance texture to get the radiance
-		return radiance;
+		
 		//throw NoriException("AreaEmitter::eval() is not yet implemented!");
 	}
 
@@ -63,23 +75,16 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		Point3f p;
-		Normal3f n;
-		Point2f uv;
-		m_mesh->samplePosition(sample, p, n, uv);
+		m_mesh->samplePosition(sample, lRec.p, lRec.n, lRec.uv);
 
-		lRec.p = p;
-		lRec.n = n;
-		lRec.wi = (lRec.p - lRec.ref).normalized();
-		lRec.uv = uv;
+		lRec.dist = (lRec.p - lRec.ref).norm();
+		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
+
+		//std::cout << "eval check" << pdf(lRec) << std::endl;
+		//std::cout << "eval check" << lRec.p << std::endl;
 		lRec.pdf = pdf(lRec);
 
-		Color3f radiance(0.0f);
-		if(lRec.pdf > 0.0f){
-			radiance = eval(lRec) / lRec.pdf;
-		}
-
-		return radiance;
+		return eval(lRec);
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -90,12 +95,14 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-		float pS = m_mesh->pdf(lRec.p);
+		float cosTheta = abs(lRec.n.dot(lRec.wi));
+
+        float pS = m_mesh->pdf(lRec.p);
 		// Convert positional pdf to solid angle pdf
-		float distance = (lRec.p - lRec.ref).norm();
-		float pA = pS * (distance * distance) / std::abs(lRec.n.dot(-lRec.wi));
+
+		float squareDistance = pow(lRec.dist,2);
+		float pA = pS * (squareDistance) / cosTheta;
 		return pA;
-		//throw NoriException("AreaEmitter::pdf() is not yet implemented!");
 	}
 
 

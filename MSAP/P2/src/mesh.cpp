@@ -44,6 +44,7 @@ void Mesh::activate() {
             NoriObjectFactory::createInstance("diffuse", PropertyList()));
     }
 
+    // m_pdf is already a DiscretePDF
     m_pdf.reserve(m_F.cols());
 
     for(uint32_t i = 0 ; i < m_F.cols() ; ++i) {
@@ -121,7 +122,9 @@ Point3f Mesh::getCentroid(n_UINT index) const {
 void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
 {
 	Point2f new_sample = sample;
-    size_t triIndex = m_pdf.sampleReuse(new_sample.x());
+
+    size_t triIndex = m_pdf.sampleReuse(new_sample(0));
+
     uint32_t i0 = m_F(0, triIndex), i1 = m_F(1, triIndex), i2 = m_F(2, triIndex);
 
     //sample position on triangule
@@ -137,34 +140,26 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
     // Compute the sampled normal
     if (m_N.size() > 0) {
         n = alpha * m_N.col(i0) + beta * m_N.col(i1) + gamma * m_N.col(i2).normalized();
-    }
-    else{
-        Point3f p0 = m_V.col(m_F(0, triIndex));
-        Point3f p1 = m_V.col(m_F(1, triIndex));
-        Point3f p2 = m_V.col(m_F(2, triIndex));
+    } else {
+        Point3f p0 = m_V.col(i0);
+        Point3f p1 = m_V.col(i1);
+        Point3f p2 = m_V.col(i2);
         n = (p1-p0).cross(p2-p0).normalized();
     }
     // Compute the sampled uv coordinates
     if (m_UV.size() > 0) {
         uv = alpha * m_UV.col(i0) + beta * m_UV.col(i1) + gamma * m_UV.col(i2);	
     }
-    else
-    {
-        uv = Point2f(0.0f);
-    }
 
-    return;
-    //throw NoriException("Mesh::samplePosition() is not yet implemented!");	
+    return;	
 }
 
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
-
     float meshArea = m_pdf.getNormalization();
 	
 	return meshArea;
-    //throw NoriException("Mesh::pdf() is not yet implemented!");	
 }
 
 

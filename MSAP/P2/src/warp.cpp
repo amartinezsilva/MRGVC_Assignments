@@ -74,17 +74,16 @@ float Warp::squareToUniformDiskPdf(const Point2f &p) {
 
 Point2f Warp::squareToUniformTriangle(const Point2f& sample) {
     Point2f warped_sample = sample;
-    if(sample[0] < sample[1]) {
-        warped_sample[0] = sample[1];
-        warped_sample[1] = sample[0];
+    if(sample[0] + sample[1] > 1) {
+        warped_sample[0] = 1-sample[0];
+        warped_sample[1] = 1-sample[1];
     }
-    //throw NoriException("Warp::squareToUniformTriangle() is not yet implemented!");
+    
     return warped_sample;
-
 }
 
 float Warp::squareToUniformTrianglePdf(const Point2f& p) {
-    return ((p.array() >= 0).all() && (p.array() <= 1).all()) && (p[0] > p[1]) ? 2.0f : 0.0f;
+    return ((p.array() >= 0).all() && (p.array() <= 1).all()) && (p[0] + p[1] <= 1) ? 2.0f : 0.0f;
 }
 
 
