@@ -1,0 +1,5 @@
+<launch>
+  <arg name="targets_file" default="targets" />
+  <node name="follow_targets" pkg="p03_arob_lab3" type="followTargets3D" args="$(arg targets_file)" output="screen"/>
+  <node type="rviz" name="rviz" pkg="rviz" args="-d $(find p03_arob_lab3)/rviz/arob_lab3.rviz" />
+</launch>
