@@ -103,7 +103,8 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
 }
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
-    return INV_FOURPI;
+    float r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
+    return ((v.array() >= -1).all() && (v.array() <= 1).all()) && (r <= 1) ? INV_FOURPI : 0.0f;
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
@@ -123,7 +124,7 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    return (v[2] >= 0.0) && (r <= 1.0) ? INV_TWOPI : 0.0f;
+    return ((v.array() >= -1).all() && (v.array() <= 1).all()) && (v[2] >= 0.0) && (r <= 1.0) ? INV_TWOPI : 0.0f;
 
 }
 
@@ -142,7 +143,7 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1]); 
     float theta = std::asin(r);
-    return (v[2] >= 0.0) && (r <= 1.0) ? std::cos(theta)*INV_PI : 0.0f;;
+    return ((v.array() >= -1).all() && (v.array() <= 1).all()) && (v[2] >= 0.0) && (r <= 1.0) ? std::cos(theta)*INV_PI : 0.0f;;
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
