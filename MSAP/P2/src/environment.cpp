@@ -80,13 +80,9 @@ public:
 
 	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
 				
-		Point3f position = Point3f(0, 0, 0);
-		float r = 10.f;
 		lRec.wi = Warp::squareToUniformSphere(sample);
-        lRec.p = position + r*lRec.wi;
         lRec.n = -lRec.wi;
         lRec.pdf = pdf(lRec);
-
 		return eval(lRec);
 	}
 
@@ -96,8 +92,7 @@ public:
 	virtual float pdf(const EmitterQueryRecord& lRec) const {
 		// Since you're sampling uniformly on the sphere, the pdf is constant
     	// You can use the pdf function from the Warp class for the squareToUniformSphere function
-		float r = 10.f;
- 		return std::pow(1.0f/r,2) * Warp::squareToUniformSpherePdf(lRec.wi);
+ 		return Warp::squareToUniformSpherePdf(lRec.wi);
 
 	}
 
