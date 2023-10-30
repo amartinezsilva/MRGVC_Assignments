@@ -39,13 +39,6 @@ float Warp::squareToTentPdf(const Point2f &p) {
 }
 
 Point2f Warp::squareToUniformDisk(const Point2f &sample) {
-    
-    // Point2f warped_sample;
-    // float r = std::sqrt(sample[0]);
-    // float theta = 2 * M_PI * sample[1];
-    // warped_sample[0] = r * std::cos(theta);
-    // warped_sample[1] = r * std::sin(theta);
-    // return warped_sample;
 
     // Map uniform random numbers to  [-1,1]
     Point2f uOffset = 2.f * sample - Vector2f(1, 1);
@@ -104,7 +97,7 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    return ((v.array() >= -1).all() && (v.array() <= 1).all()) && (r <= 1) ? INV_FOURPI : 0.0f;
+    return (r <= 1) ? INV_FOURPI : 0.0f;
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
@@ -124,7 +117,7 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    return ((v.array() >= -1).all() && (v.array() <= 1).all()) && (v[2] >= 0.0) && (r <= 1.0) ? INV_TWOPI : 0.0f;
+    return (v[2] >= 0.0) && (r <= 1.0) ? INV_TWOPI : 0.0f;
 
 }
 
@@ -143,15 +136,26 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1]); 
     float theta = std::asin(r);
-    return ((v.array() >= -1).all() && (v.array() <= 1).all()) && (v[2] >= 0.0) && (r <= 1.0) ? std::cos(theta)*INV_PI : 0.0f;;
+    return (v[2] >= 0.0) && (r <= 1.0) ? std::cos(theta)*INV_PI : 0.0f;;
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
-    throw NoriException("Warp::squareToBeckmann() is not yet implemented!");
+    Vector3f warped_sample;
+    float theta = atan(sqrt(-pow(alpha, 2) * log(1-sample.x())));
+    float phi = 2 * M_PI * sample.y();
+    warped_sample[0] = sin(theta) * cos(phi);
+    warped_sample[1] = sin(theta) * sin(phi);
+    warped_sample[2] = cos(theta);
+
+    return warped_sample;
 }
 
 float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
-    throw NoriException("Warp::squareToBeckmannPdf() is not yet implemented!");
+    float r = sqrt(m[0]*m[0] + m[1]*m[1] + m[2]*m[2]);
+    float theta = acos(m[2]);
+    float beckmann = exp(-pow(tan(theta), 2)/ pow(alpha, 2));
+    float beckmann_normalization = M_PI * pow(alpha, 2) * pow(cos(theta), 3);
+    return (r <= 1 && m[2] >= 0) ? (beckmann / beckmann_normalization) : 0.0f;
 }
 
 NORI_NAMESPACE_END
