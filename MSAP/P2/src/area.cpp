@@ -52,23 +52,14 @@ public:
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
 
-		//std::cout << "eval check" << (lRec.n.dot(lRec.wi) > 0.0f) << std::endl;
-		//
 		if (lRec.n.dot(lRec.wi) < 0.0f) {
-			// Evaluate the radiance of the area light based on the texture coordinates
-			if (m_radiance)
-			// Use the texture coordinates in rec to evaluate the radiance
-				return m_radiance->eval(lRec.uv)*M_PI;
-			else
-				// If no texture is assigned, use the constant radiance value
-				return Color3f(0.0f);
+			// Evaluate radiance of area light using texture coordinates
+			if (m_radiance) return m_radiance->eval(lRec.uv)*M_PI;
+			else return Color3f(0.0f);
 		} else {
-			return Color3f(0.0f); // Set to zero or any other desired value
+			return Color3f(0.0f); 
 		}
 		
-		// Use the radiance texture to get the radiance
-		
-		//throw NoriException("AreaEmitter::eval() is not yet implemented!");
 	}
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
@@ -80,8 +71,6 @@ public:
 		lRec.dist = (lRec.p - lRec.ref).norm();
 		lRec.wi = (lRec.p - lRec.ref) / lRec.dist;
 
-		//std::cout << "eval check" << pdf(lRec) << std::endl;
-		//std::cout << "eval check" << lRec.p << std::endl;
 		lRec.pdf = pdf(lRec);
 
 		return eval(lRec);
