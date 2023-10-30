@@ -97,7 +97,7 @@ Vector3f Warp::squareToUniformSphere(const Point2f &sample) {
 
 float Warp::squareToUniformSpherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    return (r <= 1) ? INV_FOURPI : 0.0f;
+    return (std::abs(r - 1.0f) < Epsilon) ? INV_FOURPI : 0.0f;
 }
 
 Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
@@ -117,7 +117,7 @@ Vector3f Warp::squareToUniformHemisphere(const Point2f &sample) {
 
 float Warp::squareToUniformHemispherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1] + v[2]*v[2]);
-    return (v[2] >= 0.0) && (r <= 1.0) ? INV_TWOPI : 0.0f;
+    return (v[2] >= 0.0) && (std::abs(r - 1.0f) < Epsilon) ? INV_TWOPI : 0.0f;
 
 }
 
@@ -136,7 +136,7 @@ Vector3f Warp::squareToCosineHemisphere(const Point2f &sample) {
 float Warp::squareToCosineHemispherePdf(const Vector3f &v) {
     float r = sqrt(v[0]*v[0] + v[1]*v[1]); 
     float theta = std::asin(r);
-    return (v[2] >= 0.0) && (r <= 1.0) ? std::cos(theta)*INV_PI : 0.0f;;
+    return (v[2] >= 0.0) && (r <= 1) ? std::cos(theta)*INV_PI : 0.0f;;
 }
 
 Vector3f Warp::squareToBeckmann(const Point2f &sample, float alpha) {
@@ -155,7 +155,7 @@ float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
     float theta = acos(m[2]);
     float beckmann = exp(-pow(tan(theta), 2)/ pow(alpha, 2));
     float beckmann_normalization = M_PI * pow(alpha, 2) * pow(cos(theta), 3);
-    return (r <= 1 && m[2] >= 0) ? (beckmann / beckmann_normalization) : 0.0f;
+    return (std::abs(r - 1.0f) < Epsilon && m[2] >= 0) ? (beckmann / beckmann_normalization) : 0.0f;
 }
 
 NORI_NAMESPACE_END
