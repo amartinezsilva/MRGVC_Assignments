@@ -10,7 +10,7 @@
 using my_float = long double;
 
 void
-pi_taylor_chunk(std::vector<my_float> &output,
+pi_taylor_chunk(std::vector<float> &output,
         size_t thread_id, size_t start_step, size_t stop_step) {
 
     float sum = 0.0;
@@ -20,7 +20,7 @@ pi_taylor_chunk(std::vector<my_float> &output,
  
     for(size_t i = start_step; i < stop_step; i++){
        
-       float y = sign / static_cast<my_float>(2*i + 1) - c;
+       float y = sign / static_cast<float>(2*i + 1) - c;
        float t = sum + y;
        c = (t - sum) - y;
        sum = t;
@@ -92,7 +92,7 @@ int main(int argc, const char *argv[]) {
 
     my_float pi;
 
-    std::vector<my_float> output(threads);
+    std::vector<float> output(threads);
     std::vector<std::thread> thread_vector;
 
     auto chunks = split_evenly(steps, threads);
@@ -116,13 +116,13 @@ int main(int argc, const char *argv[]) {
 
     //Compute elapsed time
     auto stop = std::chrono::steady_clock::now();
-    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
     std::cout << "For " << steps << ", pi value: "
         << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
         << pi << std::endl;
 
-    std::cout << "elapsed time: " << elapsed_seconds.count() << " ms\n";
+    std::cout << "elapsed time: " << elapsed_seconds.count() << " us\n";
 
 }
 

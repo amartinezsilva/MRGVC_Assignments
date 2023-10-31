@@ -108,13 +108,13 @@ int main(int argc, const char *argv[]) {
 
     //Compute elapsed time
     auto stop = std::chrono::steady_clock::now();
-    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::milliseconds>(stop - start);
+    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
 
     std::cout << "For " << steps << ", pi value: "
         << std::setprecision(std::numeric_limits<long double>::digits10 + 1)
         << pi << std::endl;
 
-    std::cout << "elapsed time: " << elapsed_seconds.count() << " ms\n";
+    std::cout << "elapsed time: " << elapsed_seconds.count() << " us\n";
 
 }
 

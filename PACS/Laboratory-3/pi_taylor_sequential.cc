@@ -41,8 +41,8 @@ int main(int argc, const char *argv[]) {
 
     auto end = std::chrono::steady_clock::now();
 
-    auto elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(end-start);
+    auto elapsed_time = std::chrono::duration_cast<std::chrono::microseconds>(end-start);
  
-    std::cout << "elapsed time (ms): " << elapsed_time.count() << " ms\n";
+    std::cout << "elapsed time (ms): " << elapsed_time.count() << " us\n";
 
 }
