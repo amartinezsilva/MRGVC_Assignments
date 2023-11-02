@@ -7,21 +7,21 @@
 #include <utility>
 #include <vector>
 
-using my_float = long double;
+using my_float = float;
 
 void
-pi_taylor_chunk(std::vector<float> &output,
+pi_taylor_chunk(std::vector<my_float> &output,
         size_t thread_id, size_t start_step, size_t stop_step) {
 
-    float sum = 0.0;
-    float c = 0.0;
+    my_float sum = 0.0;
+    my_float c = 0.0;
 
     int sign = start_step & 0x1 ? -1:1;
  
     for(size_t i = start_step; i < stop_step; i++){
        
-       float y = sign / static_cast<float>(2*i + 1) - c;
-       float t = sum + y;
+       my_float y = sign / static_cast<my_float>(2*i + 1) - c;
+       my_float t = sum + y;
        c = (t - sum) - y;
        sum = t;
        sign = -sign;
@@ -92,7 +92,7 @@ int main(int argc, const char *argv[]) {
 
     my_float pi;
 
-    std::vector<float> output(threads);
+    std::vector<my_float> output(threads);
     std::vector<std::thread> thread_vector;
 
     auto chunks = split_evenly(steps, threads);
