@@ -13,8 +13,6 @@ using my_float = long double;
 
 void pi_taylor_chunk(std::vector<my_float> &output, size_t thread_id, size_t start_step, size_t stop_step) {
 
-    auto start = std::chrono::steady_clock::now(); // Timer start
-
     my_float sum = 0.0;
     int sign = start_step & 0x1 ? -1 : 1;
 
@@ -24,13 +22,6 @@ void pi_taylor_chunk(std::vector<my_float> &output, size_t thread_id, size_t sta
     }
 
     output[thread_id] = 4 * sum;
-
-    // Timer end and calculation of elapsed time
-    auto stop = std::chrono::steady_clock::now();
-    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::microseconds>(stop - start);
-
-    std::cout << "Thread " << thread_id << " started at step " << start_step
-              << " and ended at step " << stop_step << " with execution time: " << elapsed_seconds.count() << " us\n";
 }
 
 std::pair<size_t, size_t>
