@@ -8,6 +8,8 @@
 #include <vector>
 
 using my_float = long double;
+//using my_float = float; //to compare with kahan implementation
+
 
 void pi_taylor_chunk(std::vector<my_float> &output, size_t thread_id, size_t start_step, size_t stop_step) {
 
