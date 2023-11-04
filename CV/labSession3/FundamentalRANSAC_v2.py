@@ -28,43 +28,26 @@ def attempts(P, spurious_rate, p):
     print(k)
     return int(k)
 
-def calculateH(x1, x2):
-    n_matches = x1.shape[1]
+def calculateF(x1, x2):
+    num_matches = x1.shape[1]
 
-    A = np.zeros((n_matches*2, 9))
-    j = 0
-    for i in range(n_matches):
-        x_0, x_1, y_0, y_1 = x1[0][i], x2[0][i], x1[1][i], x2[1][i]
+    A = np.zeros((num_matches, 9))
 
-        A[j] = [x_0, y_0, 1.0, 0.0, 0.0, 0.0, -x_1*x_0, -x_1*y_0, -x_1]
-        A[j+1] = [0, 0, 0, x_0, y_0, 1.0, -y_1*x_0, -y_1*y_0, -y_1]
+    for i in range(num_matches):
+        A[i][0] = x1[0][i] * x2[0][i]
+        A[i][1] = x1[0][i] * x2[1][i]
+        A[i][2] = x1[0][i]
+        A[i][3] = x1[1][i] * x2[0][i]
+        A[i][4] = x1[1][i] * x2[1][i]
+        A[i][5] = x1[1][i]
+        A[i][6] = x2[0][i]
+        A[i][7] = x2[1][i]
+        A[i][8] = 1
 
-        j = j + 2
+    U, s, vh = np.linalg.svd(A)
+    F_matches = np.reshape(vh[-1, :], (3, 3))
 
-    u, s, vh = np.linalg.svd(A)
-    H_matches_vector = np.reshape(vh[-1, :],(9,1))
-
-    H_21_matches = H_matches_vector.reshape(3, 3)
-
-    # print(H_21_matches)
-    return H_21_matches
-
-def evaluate_H(H, x1, x2, threshold):
-    n_matches = x1.shape[1]
-    num_inliers = 0
-    inliers = []
-
-    for i in range(n_matches):
-        # Transform x1 using H
-        x1_transformed = np.dot(H, x1[:, i])
-        x1_transformed /= x1_transformed[2]  # Normalize by the homogeneous coordinate
-
-        # Calculate L2 distance
-        distances = np.linalg.norm(x1_transformed[:2] - x2[:2], axis=0)
-        inliers = np.where(distances < threshold)[0]
-        num_inliers = len(inliers)
-
-    return num_inliers, inliers
+    return F_matches
 
 def visualize_matches(img1, kp1, img2, kp2, matches):
     img_matched = cv2.drawMatches(img1, kp1, img2, kp2, matches, None, flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS)
@@ -142,7 +125,7 @@ if __name__ == '__main__':
         random_x1 = x1_homogeneous[:,random_indices]
         random_x2 = x2_homogeneous[:,random_indices]
 
-        H = calculateH(random_x1, random_x2)
+        F = calculateF(random_x1, random_x2)
 
         # Identify points not used for H calculation
         remaining_indices = [i for i in range(x1.shape[1]) if i not in random_indices]
@@ -155,11 +138,10 @@ if __name__ == '__main__':
         
         for i in range(n_matches):
             # Transform x1 using H
-            x1_transformed = np.dot(H, x1_eval[:, i])
-            x1_transformed /= x1_transformed[2]  # Normalize by the homogeneous coordinate
+            epipole_line_SVD = np.dot(F, x1_eval[:, i])
 
-            # Calculate L2 distance
-            distance = np.linalg.norm(x1_transformed[:2] - x2_eval[:2, i])
+            # Calculate distance
+            distance = abs(np.dot(epipole_line_SVD, x2_eval[:, i])) / np.linalg.norm(epipole_line_SVD[:2])
             if distance < threshold:
                 support += 1
                 print("support: ")
@@ -169,9 +151,9 @@ if __name__ == '__main__':
                 inliers.append(i)
 
     if support > min_support:
-        best_H = calculateH(x1_homogeneous[:,inliers], x2_homogeneous[:,inliers])
-        print("Best H:")
-        print(best_H)
+        best_F = calculateF(x1_homogeneous[:,inliers], x2_homogeneous[:,inliers])
+        print("Best F:")
+        print(best_F)
         print("Number of inliers:")
         print(support)
 
