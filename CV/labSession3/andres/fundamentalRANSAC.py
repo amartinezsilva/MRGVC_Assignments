@@ -102,8 +102,8 @@ def plotNumberedImagePoints(x,strColor,offset):
         plt.text(x[0, k]+offset[0], x[1, k]+offset[1], str(k), color=strColor)
 
 
-def calculate_RANSAC_attempts(P, spurious_rate, p):
-    k = math.log(1 - P) / math.log(1 - (1 - spurious_rate)**p)
+def calculate_RANSAC_attempts(P, inlier_rate, p):
+    k = math.log(1 - P) / math.log(1 - (1 - inlier_rate)**p)
     #print(k)
     return int(k)
 
@@ -111,10 +111,11 @@ def RANSACFundamental(x1, x2):
         
     P = 0.9
     spurious_rate = 0.1
+    inlier_rate = 1 - spurious_rate
     RANSACThreshold = 2
     RANSACminsetF = 8
-    t = calculate_RANSAC_attempts(P, spurious_rate, RANSACminsetF)
-    RANSAC_params = {'t': t, 'spurious_rate': spurious_rate, 'P': P, 'threshold': RANSACThreshold, 'minset':RANSACminsetF}
+    t = calculate_RANSAC_attempts(P, inlier_rate, RANSACminsetF)
+    RANSAC_params = {'t': t, 'inlier_rate': inlier_rate, 'P': P, 'threshold': RANSACThreshold, 'minset':RANSACminsetF}
     
     keypoints0 = [cv2.KeyPoint(x=x, y=y, size=x1.shape[1]) for x, y in zip(x1[0], x1[1])]
     keypoints1 = [cv2.KeyPoint(x=x, y=y, size=x2.shape[1]) for x, y in zip(x2[0], x2[1])]
@@ -164,8 +165,8 @@ def RANSACFundamental(x1, x2):
             distance = abs(np.dot(epipole_line_SVD, x2_eval[:, i])) / np.linalg.norm(epipole_line_SVD[:2])
             if(distance < RANSAC_params['threshold']):
                 nVotes+=1
-                RANSAC_params['spurious_rate'] = nVotes / x1_eval.shape[1]
-                RANSAC_params['t'] = calculate_RANSAC_attempts(RANSAC_params['P'], RANSAC_params['spurious_rate'], RANSAC_params['minset'])
+                RANSAC_params['inlier_rate'] = nVotes / x1_eval.shape[1]
+                RANSAC_params['t'] = calculate_RANSAC_attempts(RANSAC_params['P'], RANSAC_params['inlier_rate'], RANSAC_params['minset'])
                 inliers_idx.append(i)
                 print(RANSAC_params)
 

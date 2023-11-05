@@ -35,8 +35,8 @@ def plotNumberedImagePoints(x,strColor,offset):
         plt.text(x[0, k]+offset[0], x[1, k]+offset[1], str(k), color=strColor)
 
 
-def calculate_RANSAC_attempts(P, spurious_rate, p):
-    k = math.log(1 - P) / math.log(1 - (1 - spurious_rate)**p)
+def calculate_RANSAC_attempts(P, inlier_rate, p):
+    k = math.log(1 - P) / math.log(1 - (1 - inlier_rate)**p)
     #print(k)
     return int(k)
 
@@ -44,10 +44,11 @@ def RANSACHomography(x1, x2):
         
     P = 0.9
     spurious_rate = 0.1
+    inlier_rate = 1 - spurious_rate
     RANSACThreshold = 2
     RANSACminsetH = 4
-    t = calculate_RANSAC_attempts(P, spurious_rate, RANSACminsetH)
-    RANSAC_params = {'t': t, 'spurious_rate': spurious_rate, 'P': P, 'threshold': RANSACThreshold, 'minset':RANSACminsetH}
+    t = calculate_RANSAC_attempts(P, inlier_rate, RANSACminsetH)
+    RANSAC_params = {'t': t, 'inlier_rate': inlier_rate, 'P': P, 'threshold': RANSACThreshold, 'minset':RANSACminsetH}
     
     keypoints0 = [cv2.KeyPoint(x=x, y=y, size=x1.shape[1]) for x, y in zip(x1[0], x1[1])]
     keypoints1 = [cv2.KeyPoint(x=x, y=y, size=x2.shape[1]) for x, y in zip(x2[0], x2[1])]
@@ -82,14 +83,23 @@ def RANSACHomography(x1, x2):
         x2_homographied = np.dot(H_model, x1_eval)
         x2_homographied = x2_homographied / x2_homographied[2][:]
 
+        H_inv_model = np.linalg.inv(H_model)
+        x1_homographied = np.dot(H_inv_model, x2_eval)
+        x1_homographied = x1_homographied / x1_homographied[2][:]
+
         for i in range(x1_eval.shape[1]):
             ex2 = x2_homographied[0][i] - x2_eval[0][i]
             ey2 = x2_homographied[1][i] - x2_eval[1][i]
-            distance = np.sqrt(ex2*ex2 + ey2*ey2)
-            if(distance < RANSAC_params['threshold']):
+            distance2 = np.sqrt(ex2*ex2 + ey2*ey2)
+
+            ex1 = x1_homographied[0][i] - x1_eval[0][i]
+            ey1 = x1_homographied[1][i] - x1_eval[1][i]
+            distance1 = np.sqrt(ex1*ex1 + ey1*ey1)
+
+            if(distance1 < RANSAC_params['threshold'] and distance2 < RANSAC_params['threshold']):
                 nVotes+=1
-                RANSAC_params['spurious_rate'] = nVotes / x1_eval.shape[1]
-                RANSAC_params['t'] = calculate_RANSAC_attempts(RANSAC_params['P'], RANSAC_params['spurious_rate'], RANSAC_params['minset'])
+                RANSAC_params['inlier_rate'] = nVotes / x1_eval.shape[1]
+                RANSAC_params['t'] = calculate_RANSAC_attempts(RANSAC_params['P'], RANSAC_params['inlier_rate'], RANSAC_params['minset'])
                 inliers_idx.append(i)
                 print(RANSAC_params)
 
