@@ -35,20 +35,19 @@ def plotNumberedImagePoints(x,strColor,offset):
         plt.text(x[0, k]+offset[0], x[1, k]+offset[1], str(k), color=strColor)
 
 
-def calculate_RANSAC_attempts(P, inlier_rate, p):
-    k = math.log(1 - P) / math.log(1 - (1 - inlier_rate)**p)
-    #print(k)
+def calculate_RANSAC_attempts(P, outlier_rate, p):
+    k = math.log(1 - P) / math.log(1 - (1 - outlier_rate)**p)
+    print(k)
     return int(k)
 
 def RANSACHomography(x1, x2):
         
     P = 0.9
-    spurious_rate = 0.1
-    inlier_rate = 1 - spurious_rate
+    spurious_rate = 1 - P
     RANSACThreshold = 2
     RANSACminsetH = 4
-    t = calculate_RANSAC_attempts(P, inlier_rate, RANSACminsetH)
-    RANSAC_params = {'t': t, 'inlier_rate': inlier_rate, 'P': P, 'threshold': RANSACThreshold, 'minset':RANSACminsetH}
+    t = calculate_RANSAC_attempts(P, spurious_rate, RANSACminsetH)
+    RANSAC_params = {'t': t, 'P' : P, 'spurious_rate': spurious_rate, 'threshold': RANSACThreshold, 'minset':RANSACminsetH}
     
     keypoints0 = [cv2.KeyPoint(x=x, y=y, size=x1.shape[1]) for x, y in zip(x1[0], x1[1])]
     keypoints1 = [cv2.KeyPoint(x=x, y=y, size=x2.shape[1]) for x, y in zip(x2[0], x2[1])]
@@ -56,16 +55,23 @@ def RANSACHomography(x1, x2):
     img2 = cv2.cvtColor(cv2.imread('image2.png'), cv2.COLOR_BGR2RGB)
 
     # number m of random samples
-    nVotesMin = 50
-    nVotes = 0
+    nVotesMin = 5
+    nVotesMax = 0
 
-    inliers_idx = []
+    final_inliers = []
 
     print('Total matches = ' + str(x1.shape[1]))
 
-    while RANSAC_params['minset'] != RANSAC_params['t']:
+    rng = np.random.default_rng()
 
-        random_indices = np.random.choice(x1.shape[1], RANSACminsetH, replace=False)
+    counter = 0
+    #while (RANSAC_params['minset'] != RANSAC_params['t']) and nVotesMax < nVotesMin:
+    while nVotesMax < nVotesMin:
+
+        nVotes = 0
+        inliers_idx = []
+        
+        random_indices = rng.choice(x1.shape[1], RANSACminsetH, replace=False)
 
         random_x1 = x1[:,random_indices]
         random_x2 = x2[:,random_indices] 
@@ -96,29 +102,53 @@ def RANSACHomography(x1, x2):
             ey1 = x1_homographied[1][i] - x1_eval[1][i]
             distance1 = np.sqrt(ex1*ex1 + ey1*ey1)
 
-            if(distance1 < RANSAC_params['threshold'] and distance2 < RANSAC_params['threshold']):
+            if(distance2 < RANSAC_params['threshold'] and distance1 < RANSAC_params['threshold']):
                 nVotes+=1
-                RANSAC_params['inlier_rate'] = nVotes / x1_eval.shape[1]
-                RANSAC_params['t'] = calculate_RANSAC_attempts(RANSAC_params['P'], RANSAC_params['inlier_rate'], RANSAC_params['minset'])
                 inliers_idx.append(i)
-                print(RANSAC_params)
+                #print(RANSAC_params)
 
-    if nVotes > nVotesMin:
+        if nVotes > nVotesMax:
+            nVotesMax = nVotes
+            print("Got " + str(nVotesMax) + " votes")
+            final_inliers = inliers_idx 
+            best_H = H_model
+            # Plot matches producin hypothesis and inliers supporting it
+            random_hypotheses_matches = []
+            for idx in random_indices:
+                match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
+                random_hypotheses_matches.append(match)
 
-        x1_inliers = x1[:,inliers_idx]
-        x2_inliers = x2[:,inliers_idx]
-        best_H = calculateH(x1_inliers, x2_inliers)
-        inliers_list = []
+            if nVotesMax > nVotesMin / 2 :
+                # Visualize the matches producing the hypothesis and the inliers
+                plt.title('Matches producing hypothesis')
+                visualize_matches(img1, keypoints0, img2, keypoints1, random_hypotheses_matches)
 
-        for idx in inliers_idx:
-            match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
-            inliers_list.append(match)
+                inliers_list = []
+                for idx in inliers_idx:
+                    match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
+                    inliers_list.append(match)
 
-        # Visualize the matches producing the hypothesis and the inliers
-        plt.title('Best inliers')
-        visualize_matches(img1, keypoints0, img2, keypoints1, inliers_list)
+                # Visualize the matches producing the hypothesis and the inliers
+                plt.title('Inliers supporting hypothesis')
+                visualize_matches(img1, keypoints0, img2, keypoints1, inliers_list)
+        
+        counter = counter + 1
+    
+    print("Total RANSAC iterations -> " + str(counter))
+    x1_inliers = x1[:,final_inliers]
+    x2_inliers = x2[:,final_inliers]
+    best_H = calculateH(x1_inliers, x2_inliers)
+    inliers_list = []
 
-        return best_H, x1_inliers, x2_inliers
+    for idx in final_inliers:
+        match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
+        inliers_list.append(match)
+
+    # Visualize the matches producing the hypothesis and the inliers
+    plt.title('Best inliers')
+    visualize_matches(img1, keypoints0, img2, keypoints1, inliers_list)
+
+    return best_H, x1_inliers, x2_inliers
 
 def calculateH(x1,x2):
 
@@ -239,7 +269,8 @@ def point_transfer(x1FloorData, x2FloorData, H_2_1):
 
 
 if __name__ == '__main__':
-    # np.set_printoptions(precision=4,linewidth=1024,suppress=True)
+    
+    np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
     # x1_sift = np.loadtxt('x1_sift.txt')
     # x1_sift = np.vstack([x1_sift, np.ones((1,x1_sift.shape[1]))]) #need to be in homogeneous coordinates 
