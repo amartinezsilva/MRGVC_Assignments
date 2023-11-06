@@ -66,6 +66,79 @@ def visualize_matches(img1, kp1, img2, kp2, matches):
     plt.imshow(img_matched)
     plt.show()
 
+def plotNumberedImagePoints(x,strColor,offset):
+    """
+        Plot indexes of points on a 2D image.
+         -input:
+             x: Points coordinates.
+             strColor: Color of the text.
+             offset: Offset from the point to the text.
+         -output: None
+         """
+    for k in range(x.shape[1]):
+        plt.text(x[0, k]+offset[0], x[1, k]+offset[1], str(k), color=strColor)
+
+def point_transfer(x1FloorData, x2FloorData, H_2_1):
+
+    x2HomographyFloorData = np.dot(H_2_1, x1FloorData)
+    x2HomographyFloorData = x2HomographyFloorData / x2HomographyFloorData[2][:]
+
+    H_1_2 = np.linalg.inv(H_2_1)
+    x1HomographyFloorData = np.dot(H_1_2, x2FloorData)
+    x1HomographyFloorData = x1HomographyFloorData / x1HomographyFloorData[2][:]
+
+    print("Points transfer from using Homography:")
+    print(x2HomographyFloorData)
+
+    fig = plt.figure(6)
+
+    plt.imshow(image_pers_1, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x1FloorData[0, :], x1FloorData[1, :],'rx', markersize=10,label = 'provided')
+    plt.plot(x1HomographyFloorData[0, :], x1HomographyFloorData[1, :],'bx', markersize=10, label='homography')
+    plt.legend()
+
+    plotNumberedImagePoints(x1FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    plotNumberedImagePoints(x1HomographyFloorData, 'b', (10,0)) # For plotting with numbers (choose one of the both options)
+
+    plt.title('Point transfer Image 1')
+    plt.draw()  # We update the figure display
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+    fig = plt.figure(7)
+
+    plt.imshow(image_pers_2, cmap='gray', vmin=0, vmax=255)
+    plt.plot(x2HomographyFloorData[0, :], x2HomographyFloorData[1, :],'bx', markersize=10, label='homography')
+    plt.plot(x2FloorData[0, :], x2FloorData[1, :],'rx', markersize=10, label = 'provided')
+    plt.legend()
+
+    plotNumberedImagePoints(x2FloorData, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    plotNumberedImagePoints(x2HomographyFloorData, 'b', (10,0)) # For plotting with numbers (choose one of the both options)
+
+    plt.title('Point transfer Image 2')
+    plt.draw()  # We update the figure display
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+    mean_error1 = 0.0
+    mean_error2 = 0.0
+
+    for i in range(x1FloorData.shape[1]):
+        ex1 = x1FloorData[0][i] - x1HomographyFloorData[0][i]
+        ey1 = x1FloorData[1][i] - x1HomographyFloorData[1][i]
+        mean_error1 = mean_error1 + np.sqrt(ex1*ex1 + ey1*ey1)
+        ex2 = x2FloorData[0][i] - x2HomographyFloorData[0][i]
+        ey2 = x2FloorData[1][i] - x2HomographyFloorData[1][i]
+        mean_error2 = mean_error2 + np.sqrt(ex2*ex2 + ey2*ey2)
+
+    mean_error1 = mean_error1 / x1FloorData.shape[1]
+    print("Mean error image 1:")
+    print(mean_error1)
+    mean_error2 = mean_error2 / x2FloorData.shape[1]
+    print("Mean error image 2:")
+    print(mean_error2)
+
 if __name__ == '__main__':
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
@@ -115,12 +188,13 @@ if __name__ == '__main__':
     visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, dMatchesList)
 
     # RANSAC
-    threshold = 6 # pixels
+    threshold = 2 # pixels
 
     best_H = None
     best_num_inliers = 0
+    iterations = 5000
 
-    for kAttempt in range(int(x1.shape[1]/4)):
+    for kAttempt in range(iterations):
         # Generate random indices
         random_indices = np.random.choice(x1.shape[1], 4, replace=False)
 
@@ -130,9 +204,26 @@ if __name__ == '__main__':
 
         H = calculateH(random_x1, random_x2)
 
-        num_inliers, inliers = evaluate_H(H, x1_homogeneous, x2_homogeneous, threshold)
+        # Identify points not used for H calculation
+        remaining_indices = [i for i in range(x1.shape[1]) if i not in random_indices]
+
+        # Select the remaining points for evaluation
+        x1_eval = x1_homogeneous[:, remaining_indices]
+        x2_eval = x2_homogeneous[:, remaining_indices]
+
+        num_inliers, inliers = evaluate_H(H, x1_eval, x2_eval, threshold)
 
         if num_inliers > best_num_inliers:
+
+            random_list = []
+            for idx in random_indices:
+                match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
+                random_list.append(match)
+
+            # Visualize the 4 matches producing the hypothesis and the inliers
+            plt.title('Points used for random hypotesis')
+            visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, random_list)
+        
             print("Number of votes:")
             print(num_inliers)
             best_num_inliers = num_inliers
@@ -155,6 +246,8 @@ if __name__ == '__main__':
 
     plt.title('Best Inliers')
     visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, inliers_list)
+
+    point_transfer(x1_homogeneous[:,inliers], x2_homogeneous[:,inliers], best_H)
 
 
 
