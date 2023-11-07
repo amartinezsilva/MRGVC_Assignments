@@ -36,8 +36,11 @@ def drawLine(l,strFormat,lWidth):
     p_l_x = np.array([-l[2] / l[0], 0])
     # Draw the line segment p_l_x to  p_l_y
     plt.plot([p_l_y[0], p_l_x[0]], [p_l_y[1], p_l_x[1]], strFormat, linewidth=lWidth)
-
+    
 def mouse_event_img1(event, F):
+
+    fig = plt.figure(5)
+    plt.imshow(image_pers_1, cmap='gray', vmin=0, vmax=255)
 
     clicked_x = np.array([[event.xdata], [event.ydata], [1]])
     print("Point clicked in image 1:")
@@ -52,8 +55,8 @@ def computeline_img2(point, F):
 
     fig = plt.figure(6)
     plt.imshow(image_pers_2, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x2[0, :], x2[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x2, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    #plt.plot(x2[0, :], x2[1, :],'rx', markersize=10)
+    #plotNumberedImagePoints(x2, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
     plt.title('Image 2')
     drawLine(l,'g',1)
     plt.draw()  # We update the figure display
@@ -100,8 +103,8 @@ def draw_epipolar_line_img2(F):
     #Click point img 1
     fig = plt.figure(5)
     plt.imshow(image_pers_1, cmap='gray', vmin=0, vmax=255)
-    plt.plot(x1[0, :], x1[1, :],'rx', markersize=10)
-    plotNumberedImagePoints(x1, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
+    # plt.plot(x1[0, :], x1[1, :],'rx', markersize=10)
+    # plotNumberedImagePoints(x1, 'r', (10,0)) # For plotting with numbers (choose one of the both options)
     plt.title('Image 1')
     plt.draw()  # We update the figure display
     cid = fig.canvas.mpl_connect('button_press_event', lambda event: mouse_event_img1(event, F)) #compute line and plot in image 2
@@ -137,13 +140,15 @@ def evaluate_F(F, x1, x2, threshold):
     inliers = []
 
     for i in range(n_matches):
-        # Transform x1 using H
-        epipole_line_SVD = np.dot(F, x1[:, i])
+        epipole_line_1 = np.dot(F, x1[:, i])
 
-        # Calculate distance
-        distance = abs(np.dot(epipole_line_SVD, x2[:, i])) / np.linalg.norm(epipole_line_SVD[:2])
+        distance2 = abs(np.dot(epipole_line_1, x2[:, i])) / np.linalg.norm(epipole_line_1[:2])
 
-        if distance < threshold:
+        epipole_line_2 = np.dot(F.T, x2[:, i])
+
+        distance1 = abs(np.dot(epipole_line_2, x1[:, i])) / np.linalg.norm(epipole_line_2[:2])
+
+        if distance2< threshold and distance1 < threshold:
             num_inliers += 1
             inliers.append(i)
 
@@ -209,11 +214,12 @@ if __name__ == '__main__':
     visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, dMatchesList)
 
     # RANSAC
-    threshold = 2 # pixels
+    threshold = 1 # pixels
 
     best_F = None
     best_num_inliers = 0
     iterations = 5000
+    best_inliers = []
 
     for kAttempt in range(iterations):
         # Generate random indices
@@ -229,8 +235,8 @@ if __name__ == '__main__':
         remaining_indices = [i for i in range(x1.shape[1]) if i not in random_indices]
 
         # Select the remaining points for evaluation
-        x1_eval = x1Norm[:, remaining_indices]
-        x2_eval = x2Norm[:, remaining_indices]
+        x1_eval = x1_homogeneous[:, remaining_indices]
+        x2_eval = x2_homogeneous[:, remaining_indices]
 
         n_matches = x1_eval.shape[1]
 
@@ -238,6 +244,7 @@ if __name__ == '__main__':
 
         if num_inliers > best_num_inliers:
 
+            best_inliers = inliers
             random_list = []
             for idx in random_indices:
                 match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
@@ -252,25 +259,25 @@ if __name__ == '__main__':
             best_num_inliers = num_inliers
             best_F = F
 
-            inliers_list = []
-            for idx in inliers:
+            best_inliers_list = []
+            for idx in best_inliers:
                 match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
-                inliers_list.append(match)
+                best_inliers_list.append(match)
 
             # Visualize the 4 matches producing the hypothesis and the inliers
             plt.title('Random hypotesis')
-            visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, inliers_list)
+            visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, best_inliers_list)
 
-
+    F_21 = N2.T @ best_F @ N1
     print("Best F:")
-    print(best_F)
+    print(F_21)
     print("Number of inliers:")
     print(best_num_inliers)
 
     plt.title('Best Inliers')
-    visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, inliers_list)
+    visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, best_inliers_list)
 
-    draw_epipolar_line_img2(best_F)
+    draw_epipolar_line_img2(F_21)
 
 
 

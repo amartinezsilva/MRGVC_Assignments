@@ -224,15 +224,13 @@ if __name__ == '__main__':
         x1_eval = x1_homogeneous[:, remaining_indices]
         x2_eval = x2_homogeneous[:, remaining_indices]
 
-        F_inv_model = np.linalg.inv(F)
-
         for i in range(x1_eval.shape[1]):
             epipole_line_1 = np.dot(F, x1_eval[:, i])
 
             distance2 = abs(np.dot(epipole_line_1, x2_eval[:, i])) / np.linalg.norm(epipole_line_1[:2])
 
             # Transform x1 using H
-            epipole_line_2 = np.dot(F_inv_model, x2_eval[:, i])
+            epipole_line_2 = np.dot(F.T, x2_eval[:, i])
 
             # Calculate distance
             distance1 = abs(np.dot(epipole_line_2, x1_eval[:, i])) / np.linalg.norm(epipole_line_2[:2])

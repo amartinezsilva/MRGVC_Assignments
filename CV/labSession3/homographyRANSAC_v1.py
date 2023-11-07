@@ -43,19 +43,26 @@ def calculateH(x1, x2):
     return H_21_matches
 
 def evaluate_H(H, x1, x2, threshold):
-    n_matches = x1.shape[1]
     num_inliers = 0
     inliers = []
 
-    for i in range(n_matches):
-        # Transform x1 using H
-        x1_transformed = np.dot(H, x1[:, i])
-        x1_transformed /= x1_transformed[2]  # Normalize by the homogeneous coordinate
+    x2_homographied = np.dot(H, x1)
+    x2_homographied = x2_homographied / x2_homographied[2][:]
 
-        # Calculate L2 distance
-        distance = np.linalg.norm(x1_transformed[:2] - x2[:2, i])
+    H_inv_model = np.linalg.inv(H)
+    x1_homographied = np.dot(H_inv_model, x2)
+    x1_homographied = x1_homographied / x1_homographied[2][:]
 
-        if distance < threshold:
+    for i in range(x1.shape[1]):
+        ex2 = x2_homographied[0][i] - x2[0][i]
+        ey2 = x2_homographied[1][i] - x2[1][i]
+        distance2 = np.sqrt(ex2*ex2 + ey2*ey2)
+
+        ex1 = x1_homographied[0][i] - x1[0][i]
+        ey1 = x1_homographied[1][i] - x1[1][i]
+        distance1 = np.sqrt(ex1*ex1 + ey1*ey1)
+
+        if distance2< threshold and distance1 < threshold:
             num_inliers += 1
             inliers.append(i)
 
@@ -192,7 +199,8 @@ if __name__ == '__main__':
 
     best_H = None
     best_num_inliers = 0
-    iterations = 5000
+    best_inliers = []
+    iterations = 10000
 
     for kAttempt in range(iterations):
         # Generate random indices
@@ -214,7 +222,7 @@ if __name__ == '__main__':
         num_inliers, inliers = evaluate_H(H, x1_eval, x2_eval, threshold)
 
         if num_inliers > best_num_inliers:
-
+            best_inliers = inliers
             random_list = []
             for idx in random_indices:
                 match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
@@ -229,14 +237,14 @@ if __name__ == '__main__':
             best_num_inliers = num_inliers
             best_H = H
 
-            inliers_list = []
+            best_inliers_list = []
             for idx in inliers:
                 match = cv2.DMatch(_queryIdx=idx, _trainIdx=idx, _distance=0)
-                inliers_list.append(match)
+                best_inliers_list.append(match)
 
             # Visualize the 4 matches producing the hypothesis and the inliers
             plt.title('Random hypotesis')
-            visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, inliers_list)
+            visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, best_inliers_list)
 
 
     print("Best H:")
@@ -245,9 +253,9 @@ if __name__ == '__main__':
     print(best_num_inliers)
 
     plt.title('Best Inliers')
-    visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, inliers_list)
+    visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, best_inliers_list)
 
-    point_transfer(x1_homogeneous[:,inliers], x2_homogeneous[:,inliers], best_H)
+    point_transfer(x1_homogeneous[:,best_inliers], x2_homogeneous[:,best_inliers], best_H)
 
 
 
