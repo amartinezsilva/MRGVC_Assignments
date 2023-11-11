@@ -54,9 +54,11 @@ public:
             || Frame::cosTheta(bRec.wo) <= 0)
             return Color3f(0.0f);
 
-        Vector3f wh = ((bRec.wi + bRec.wo)).normalized();
+        Vector3f wh = (bRec.wi + bRec.wo).normalized();
+        if (wh.x() == 0 && wh.y() == 0 && wh.z() == 0)
+            return Color3f(0.0f);
+
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
-        float R0 = m_R0->eval(bRec.uv).getLuminance();
         
         float D = Reflectance::BeckmannNDF(wh, alpha);
         Color3f F = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_R0->eval(bRec.uv));
@@ -89,18 +91,23 @@ public:
         // direction, the last part of this function should simply return the
         // BRDF value divided by the solid angle density and multiplied by the
         // cosine factor from the reflection equation, i.e.
-        // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
-        if (Frame::cosTheta(bRec.wi) <= 0)
+        // return eval(bRec) * Frame::cosTheta(bRec.wi) / pdf(bRec);
+        if (Frame::cosTheta(bRec.wi) <= 0) {
+            bRec.wo = Vector3f(1, 0, 0);
             return Color3f(0.0f);
+        }
 
         bRec.measure = ESolidAngle;
 
         Vector3f wh  = Warp::squareToBeckmann(_sample, m_alpha->eval(bRec.uv).getLuminance());
 
-        bRec.wo = wh * 2 - bRec.wi;
-        bRec.eta = 1.0f;
+        bRec.wo = 2.0f * (bRec.wi.dot(wh)) * wh - bRec.wi;
+        //bRec.eta = 1.0f;
 
-        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
+        if(pdf(bRec) <= Epsilon)
+            return Color3f(0.0f);
+
+        return eval(bRec) * Frame::cosTheta(bRec.wi) / pdf(bRec);
     }
 
     bool isDiffuse() const {
@@ -289,7 +296,7 @@ public:
         float alpha = m_alpha->eval(bRec.uv).getLuminance();
         
         float D = Reflectance::BeckmannNDF(wh, alpha);
-        Color3f F = Reflectance::fresnel(cosThetai, m_intIOR, m_extIOR);
+        Color3f F = Reflectance::fresnel(cosThetai, m_extIOR, m_intIOR);
         float Gi = Reflectance::G1(bRec.wi, wh, alpha);
         float Go = Reflectance::G1(bRec.wo, wh, alpha);
         float G = Gi*Go;
@@ -297,7 +304,7 @@ public:
 
         Color3f f_mf = D*F*G/denominator;
 
-        return f_diff + f_mf;
+        return f_mf + f_diff;
 	}
 
     /// Evaluate the sampling density of \ref sample() wrt. solid angles
@@ -310,7 +317,7 @@ public:
             return 0.0f;
 
         // RUSSIAN ROULETTE
-        float pMicrofacet = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_intIOR, m_extIOR);
+        float pMicrofacet = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
         float pDiffuse = 1.0f - pMicrofacet;
 
 		Vector3f wh = ((bRec.wi + bRec.wo)).normalized();
@@ -323,9 +330,11 @@ public:
         // direction, the last part of this function should simply return the
         // BRDF value divided by the solid angle density and multiplied by the
         // cosine factor from the reflection equation, i.e.
-        // return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
-        if (Frame::cosTheta(bRec.wi) <= 0)
+        // return eval(bRec) * Frame::cosTheta(bRec.wi) / pdf(bRec);
+        if (Frame::cosTheta(bRec.wi) <= 0) {
+            bRec.wo = Vector3f(0, 0, 1);
             return Color3f(0.0f);
+        }
 
         bRec.measure = ESolidAngle;
 
@@ -333,16 +342,21 @@ public:
         float pMicrofacet = Reflectance::fresnel(Frame::cosTheta(bRec.wi), m_extIOR, m_intIOR);
         float pDiffuse = 1.0 - pMicrofacet;
         
-        bRec.eta = (pDiffuse > 0) ? (m_intIOR / m_extIOR) : 1.0;
 
-        if (_sample.x() < pDiffuse){
+        if (_sample.x() < pMicrofacet){
             bRec.wo = Warp::squareToCosineHemisphere(_sample);
+            bRec.eta = (m_intIOR / m_extIOR);
         } else {
             Vector3f wh = Warp::squareToBeckmann(_sample, m_alpha->eval(bRec.uv).getLuminance());
-            bRec.wo = wh*2.0 - bRec.wi;
+            bRec.wo = 2.0f * (bRec.wi.dot(wh)) * wh - bRec.wi;
+            //bRec.wo = wh * 2.0 - bRec.wi;
+            bRec.eta = 1.0f;
         }
 
-        return eval(bRec) * Frame::cosTheta(bRec.wo) / pdf(bRec);
+        if(pdf(bRec) <= Epsilon)
+            return Color3f(0.0f);
+
+        return eval(bRec) * Frame::cosTheta(bRec.wi) / pdf(bRec);
 	}
 
     bool isDiffuse() const {
