@@ -17,7 +17,7 @@ public:
 	}
 
 	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
-		Color3f Lo(0.0f);
+		Color3f Lo(0.0);
 
 		Intersection its;
 		if (!scene->rayIntersect(ray, its))
@@ -36,6 +36,7 @@ public:
 		//BSDF
 		BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d), its.uv);
 		Color3f throughput = its.mesh->getBSDF()->sample(bsdfRecord, sampler->next2D());
+
 		Vector3f new_dir = its.toWorld(bsdfRecord.wo);
 
 		//reflect
@@ -43,6 +44,7 @@ public:
 
 		Intersection new_its;
 		Color3f Le_r(0.0f);
+
 		bool intersection = scene->rayIntersect(rayR, new_its);
 		if (!intersection) {
 			Le_r = scene->getBackground(rayR);
@@ -50,7 +52,7 @@ public:
 			//std::cout <<"emitterrr" << endl;
 			EmitterQueryRecord new_emitterRecord;
 			new_emitterRecord.wi = rayR.d;
-			new_emitterRecord.n = its.shFrame.n;
+			new_emitterRecord.n = new_its.shFrame.n;
 			Le_r = new_its.mesh->getEmitter()->eval(new_emitterRecord);	
 		}
 			
