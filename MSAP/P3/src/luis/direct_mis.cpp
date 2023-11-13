@@ -86,7 +86,7 @@ public:
 		Color3f Li_em = random_emitter->sample(emitterRecord_ems, sampler->next2D(), 0.);
 		pdfpositionlight = random_emitter->pdf(emitterRecord_ems);
 		
-		em_pdf = pdflight * pdfpositionlight; // ??? //
+		em_pdf = pdflight * pdfpositionlight;
 
 		float cos_theta_i = its.shFrame.n.dot(emitterRecord_ems.wi);
 

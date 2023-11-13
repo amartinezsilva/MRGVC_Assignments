@@ -49,7 +49,6 @@ public:
 		if (!intersection) {
 			Le_r = scene->getBackground(rayR);
 		} else if(new_its.mesh->isEmitter()) {
-			//std::cout <<"emitterrr" << endl;
 			EmitterQueryRecord new_emitterRecord;
 			new_emitterRecord.wi = rayR.d;
 			new_emitterRecord.n = new_its.shFrame.n;
