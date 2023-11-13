@@ -257,7 +257,7 @@ int main(int argc, char *argv[]){
         for(size_t j = 0; j < w_div; j++)
             {
                 size_t xmin = j * x_width;
-                size_t xmax = j == w_div - 1 ? h : xmin + x_width;
+                size_t xmax = j == w_div - 1 ? w : xmin + x_width;
 
                 size_t ymin = i * y_height;
                 size_t ymax = i == h_div - 1 ? h : ymin + y_height;
@@ -267,8 +267,9 @@ int main(int argc, char *argv[]){
             }
     }
 
-
     // wait for completion
+    pool.wait();
+
     auto stop = std::chrono::steady_clock::now();
     std::cout << "Execution time: " <<
       std::chrono::duration_cast<std::chrono::milliseconds>(stop-start).count() << " ms." << std::endl;

@@ -47,6 +47,7 @@ class thread_pool
         _threads.push_back(std::thread(&thread_pool::worker_thread, this));
       }
 
+
   }
 
   ~thread_pool()
@@ -57,9 +58,11 @@ class thread_pool
   void wait()
   {
       // wait for completion
-      while(_work_queue.empty()){
+      while(!_work_queue.empty()){
         std::this_thread::sleep_for(milliseconds(100));
       }
+      _done = true;
+      _joiner.~join_threads();
       // active waiting
   }
 
