@@ -62,6 +62,7 @@ public:
 			EmitterQueryRecord new_emitterRecord;
 			new_emitterRecord.wi = rayR.d;
 			new_emitterRecord.n = new_its.shFrame.n;
+			new_emitterRecord.dist = new_its.t;
 			Le_r = new_its.mesh->getEmitter()->eval(new_emitterRecord);
 			//Evaluate pdf of emitter sampling using a sample generated with material sampling
 			em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
