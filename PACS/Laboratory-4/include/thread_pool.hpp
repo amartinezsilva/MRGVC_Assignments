@@ -66,6 +66,6 @@ class thread_pool
   template<typename F>
     void submit(F f)
     {
-      work_queue.push(std::function<task_type>(f));
+      _work_queue.push(std::function<task_type>(f));
     }
 };
