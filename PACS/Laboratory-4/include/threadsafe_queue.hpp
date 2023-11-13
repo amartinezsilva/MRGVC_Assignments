@@ -36,10 +36,13 @@ class threadsafe_queue
 
     bool try_pop(T& value)
     {
-	// please complete
         std::unique_lock<std::mutex> lk(_m);
+        if(_data_queue.empty()){
+            return false;
+        }
         value = _data_queue.front();
         _data_queue.pop();
+        return true;
     }
 
     void wait_and_pop(T& value)
@@ -63,7 +66,7 @@ class threadsafe_queue
 
     bool empty() const
     {
-	// please complete
-    return _data_queue.empty();
+        std::lock_guard<std::mutex> lk(_m);
+        return _data_queue.empty();
     }
 };

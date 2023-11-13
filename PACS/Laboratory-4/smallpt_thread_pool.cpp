@@ -250,6 +250,9 @@ int main(int argc, char *argv[]){
     const auto x_width = w / w_div;
 
     thread_pool pool(std::thread::hardware_concurrency());
+
+    // launch the tasks
+
     for(size_t i = 0; i < h_div; i++){
         for(size_t j = 0; j < w_div; j++)
             {
@@ -263,8 +266,6 @@ int main(int argc, char *argv[]){
                 pool.submit([=]{ render(w, h, samps, cam, cx, cy, c_ptr, reg); });
             }
     }
-
-    // launch the tasks
 
 
     // wait for completion
