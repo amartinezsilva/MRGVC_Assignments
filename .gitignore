@@ -4,10 +4,5 @@
 PACS/P1/eigen-3.4.0/
 *.pyc
 *.zip
-<<<<<<< HEAD
 MSAP/build
 MSAP/Nori2
-=======
-MSAP/Nori2
-MSAP/build
->>>>>>> ft/pacs_lab4
