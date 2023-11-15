@@ -364,8 +364,8 @@ if __name__ == '__main__':
 
     E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
 
-    R_c2_c1_choosed, t_c2_c1_choosed, min_error = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
-    print("error of R and t choosed: ", min_error)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
+    print("error of R and t chosen: ", min_error)
 
 
     ######## visualize points with error ########
@@ -380,7 +380,7 @@ if __name__ == '__main__':
     # points_c1 = normalize_array(points_c1_unnormalized.T).T
 
     # # calculating points in 2D from 3d to camera 2
-    # T_c2_c1 = ensamble_T(R_c2_c1_choosed, t_c2_c1_choosed)
+    # T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
     # T_c1_c2 = np.linalg.inv(T_c2_c1)
 
     # P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_c1)
@@ -393,11 +393,11 @@ if __name__ == '__main__':
     # visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     # visualize_2D_points(img2, x2Data, points_c2_unnormalized)
 
-    theta = crossMatrixInv(scipy.linalg.logm(R_c2_c1_choosed)) 
+    theta = crossMatrixInv(scipy.linalg.logm(R_c2_c1_chosen)) 
     
     # theory 6.8
-    elevation = np.arccos(t_c2_c1_choosed[2])
-    azimuth = np.arcsin(t_c2_c1_choosed[0] / np.sin(elevation))
+    elevation = np.arccos(t_c2_c1_chosen[2])
+    azimuth = np.arcsin(t_c2_c1_chosen[0] / np.sin(elevation))
 
     Op = theta+[azimuth, elevation] + X_w[:3].flatten().tolist()
 
