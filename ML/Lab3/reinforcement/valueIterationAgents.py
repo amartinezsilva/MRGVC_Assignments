@@ -67,7 +67,7 @@ class ValueIterationAgent(ValueEstimationAgent):
 
             for state in self.mdp.getStates():
                 a_star = self.computeActionFromValues(state)
-                new_value[state] = self.computeQValueFromValues(state, a_star)
+                new_values[state] = self.computeQValueFromValues(state, a_star)
 
             self.values = new_values
 
@@ -153,6 +153,16 @@ class AsynchronousValueIterationAgent(ValueIterationAgent):
 
     def runValueIteration(self):
         "*** YOUR CODE HERE ***"
+        states = self.mdp.getStates()
+        n_states = len(states)
+        for i in range(self.iterations):
+          state = states[i % n_states]
+          if not self.mdp.isTerminal(state):
+            values = []
+            for action in self.mdp.getPossibleActions(state):
+              q_value = self.computeQValueFromValues(state, action)
+              values.append(q_value)
+            self.values[state] = max(values)
 
 class PrioritizedSweepingValueIterationAgent(AsynchronousValueIterationAgent):
     """

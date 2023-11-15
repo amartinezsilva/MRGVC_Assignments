@@ -62,7 +62,14 @@ class QLearningAgent(ReinforcementAgent):
           terminal state, you should return a value of 0.0.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        legal_actions = self.getLegalActions(state)
+        if(len(legal_actions) == 0): 
+            return 0.0
+        
+        Qs_action = util.Counter()
+        for action in legal_actions:
+            Qs_action[action] = self.getQValue(state, action)
+        return Qs_action[Qs_action.argMax()]
 
     def computeActionFromQValues(self, state):
         """
@@ -71,8 +78,15 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
+    
+        legal_actions = self.getLegalActions(state)
+        if(len(legal_actions) == 0): 
+            return None
+        best_Q = self.computeValueFromQValues(state)
+        for action in legal_actions:
+            if best_Q == self.getQValue(state, action):
+                return action
+    
     def getAction(self, state):
         """
           Compute the action to take in the current state.  With
@@ -86,11 +100,11 @@ class QLearningAgent(ReinforcementAgent):
         """
         # Pick Action
         legalActions = self.getLegalActions(state)
-        action = None
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
-
-        return action
+        if util.flipCoin(self.epsilon):
+            return random.choice(legalActions)
+        
+        return self.getPolicy(state)
 
     def update(self, state, action, nextState, reward):
         """
@@ -102,7 +116,10 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        prev_q_value = self.getQValue(state, action)
+        
+        self.Qvalues[(state,action)] = prev_q_value + self.alpha * (reward + self.discount * self.getValue(nextState) - prev_q_value)
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
