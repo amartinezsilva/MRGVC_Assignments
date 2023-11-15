@@ -249,7 +249,7 @@ int main(int argc, char *argv[]){
     const auto y_height = h / h_div;
     const auto x_width = w / w_div;
 
-    thread_pool pool(std::thread::hardware_concurrency());
+    thread_pool *pool = new thread_pool({h_div * w_div});
 
     // launch the tasks
 
@@ -263,12 +263,12 @@ int main(int argc, char *argv[]){
                 size_t ymax = i == h_div - 1 ? h : ymin + y_height;
 
                 Region reg(xmin, xmax, ymin, ymax);
-                pool.submit([=]{ render(w, h, samps, cam, cx, cy, c_ptr, reg); });
+                pool->submit([=]{ render(w, h, samps, cam, cx, cy, c_ptr, reg); });
             }
     }
 
     // wait for completion
-    pool.wait();
+    pool -> ~thread_pool();
 
     auto stop = std::chrono::steady_clock::now();
     std::cout << "Execution time: " <<

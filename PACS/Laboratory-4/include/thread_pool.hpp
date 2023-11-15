@@ -53,6 +53,7 @@ class thread_pool
   ~thread_pool()
   {
     wait();
+    _done = true; 
   }
 
   void wait()
@@ -61,8 +62,6 @@ class thread_pool
       while(!_work_queue.empty()){
         std::this_thread::sleep_for(milliseconds(100));
       }
-      _done = true;
-      _joiner.~join_threads();
       // active waiting
   }
 

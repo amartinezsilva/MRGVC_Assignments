@@ -37,6 +37,7 @@ class threadsafe_queue
     bool try_pop(T& value)
     {
         std::unique_lock<std::mutex> lk(_m);
+        
         if(_data_queue.empty()){
             return false;
         }
