@@ -167,6 +167,7 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
     min_error = float('inf')
     selected_R = None
     selected_t = None
+    X_computed_selected = None
 
     for idx, (R, t) in enumerate(poses):
         T_c2_to_c1 = np.eye(4)
@@ -184,10 +185,11 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
             min_error = mean_error
             selected_R = R
             selected_t = t
+            X_computed_selected = X_computed
 
         # visualize_results(T_w_to_c1, X_computed, X_w, idx+6)
 
-    return selected_R, selected_t, min_error
+    return selected_R, selected_t, min_error, X_computed_selected
 
 def visualize_results(T_w_to_c1, X_computed, X_w, idx):
     fig3D = plt.figure(idx)
@@ -364,42 +366,43 @@ if __name__ == '__main__':
 
     E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
 
-    R_c2_c1_choosed, t_c2_c1_choosed, min_error = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
     print("error of R and t choosed: ", min_error)
 
 
     ######## visualize points with error ########
 
     # # calculating points in 2D from 3d to camera 1
-    # T_c1_w = np.eye(4)
-    # P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
-    # P1 = np.dot(K_c, P1)
+    T_c1_w = np.eye(4)
+    #T_c1_w = np.linalg.inv(T_w_c1)
+    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
+    P1 = np.dot(K_c, P1)
         
-    # points_c1_unnormalized = np.dot(P1,X_w)
+    points_c1_unnormalized = np.dot(P1,X_computed)
 
-    # points_c1 = normalize_array(points_c1_unnormalized.T).T
+    points_c1 = normalize_array(points_c1_unnormalized.T).T
 
-    # # calculating points in 2D from 3d to camera 2
-    # T_c2_c1 = ensamble_T(R_c2_c1_choosed, t_c2_c1_choosed)
-    # T_c1_c2 = np.linalg.inv(T_c2_c1)
+    # calculating points in 2D from 3d to camera 2
+    T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
+    T_c1_c2 = np.linalg.inv(T_c2_c1)
 
-    # P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_c1)
-    # P2 = np.dot(K_c, P2)
+    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_c1)
+    P2 = np.dot(K_c, P2)
 
-    # points_c2_unnormalized = np.dot(P2,X_w)
+    points_c2_unnormalized = np.dot(P2,X_computed)
 
-    # points_c2 = normalize_array(points_c2_unnormalized.T).T
+    points_c2 = normalize_array(points_c2_unnormalized.T).T
 
-    # visualize_2D_points(img1, x1Data, points_c1_unnormalized)
-    # visualize_2D_points(img2, x2Data, points_c2_unnormalized)
+    visualize_2D_points(img1, x1Data, points_c1_unnormalized)
+    visualize_2D_points(img2, x2Data, points_c2_unnormalized)
 
-    theta = crossMatrixInv(scipy.linalg.logm(R_c2_c1_choosed)) 
+    theta = crossMatrixInv(scipy.linalg.logm(R_c2_c1_chosen)) 
     
     # theory 6.8
-    elevation = np.arccos(t_c2_c1_choosed[2])
-    azimuth = np.arcsin(t_c2_c1_choosed[0] / np.sin(elevation))
+    elevation = np.arccos(t_c2_c1_chosen[2])
+    azimuth = np.arcsin(t_c2_c1_chosen[0] / np.sin(elevation))
 
-    Op = theta+[azimuth, elevation] + X_w[:3].flatten().tolist()
+    Op = theta+[azimuth, elevation] + X_computed[:3].flatten().tolist()
 
     nPoints = X_w[1].shape[0]
     res = resBundleProjection(Op, x1Data, x2Data, K_c, nPoints)
@@ -409,16 +412,22 @@ if __name__ == '__main__':
 
     ## SOLUTION OPTIMIZED
 
-    theta_OPT = OpOptim[0:3]
-    azimuth_OPT = OpOptim[3]
-    elevation_OPT = OpOptim[4]
+    #print(OpOptim)
+    theta_OPT = OpOptim.x[0:3]
+    azimuth_OPT = OpOptim.x[3]
+    elevation_OPT = OpOptim.x[4]
+    X_computed_OPT_list = OpOptim.x[5:]
+
+    X_computed_OPT = np.array(X_computed_OPT_list).reshape((3, nPoints))
+    X_computed_OPT = np.vstack((X_computed_OPT, np.ones((1, nPoints)))) # homogeneous coords
 
     # calculating points in 2D from 3d to camera 1
-    T_c1_w = np.linalg.inv(T_w_c1)
+    #T_c1_w = np.linalg.inv(T_w_c1)
+    T_c1_w = np.eye(4)
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
     P1 = np.dot(K_c, P1)
     
-    points_c1_unnormalized = np.dot(P1,X_w)
+    points_c1_unnormalized = np.dot(P1,X_computed_OPT)
 
     points_c1 = normalize_array(points_c1_unnormalized.T).T
 
@@ -432,6 +441,9 @@ if __name__ == '__main__':
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_2_1)
     P2 = np.dot(K_c, P2)
 
-    points_c2_unnormalized = np.dot(P2,X_w)
+    points_c2_unnormalized = np.dot(P2,X_computed_OPT)
 
     points_c2 = normalize_array(points_c2_unnormalized.T).T
+
+    visualize_2D_points(img1, x1Data, points_c1_unnormalized)
+    visualize_2D_points(img2, x2Data, points_c2_unnormalized)
