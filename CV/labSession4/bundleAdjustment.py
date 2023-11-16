@@ -139,8 +139,6 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
     u, s, vh = np.linalg.svd(E)
     
     t_estimated = u[:, 2]
-    print("Estimated t:")
-    print(t_estimated)
 
     W = np.array([[0, -1, 0],
                   [1, 0, 0],
@@ -175,11 +173,10 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
         T_c2_to_c1[:3, 3] = t
         T_c2_to_c1[3, 3] = 1
         T_w_to_c1 = np.dot(T_w_c2, T_c2_to_c1)
-
+        
         X_computed = triangulate_3D(x1, x2, T_w_to_c1, T_w_c2)
 
         mean_error = np.mean(np.linalg.norm(X_w - X_computed, axis=0))
-        print(mean_error)
 
         if mean_error < min_error:
             min_error = mean_error
@@ -187,7 +184,8 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
             selected_t = t
             X_computed_selected = X_computed
 
-        # visualize_results(T_w_to_c1, X_computed, X_w, idx+6)
+        #visualize_results(T_w_to_c1, X_computed, X_w, idx+6)
+        plot_3D(X_computed, X_w, T_w_to_c1, T_w_c2, idx+1)
 
     return selected_R, selected_t, min_error, X_computed_selected
 
@@ -211,6 +209,37 @@ def visualize_results(T_w_to_c1, X_computed, X_w, idx):
     zFakeBoundingBox = np.linspace(0, 4, 2)
     plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
     plt.title(f'Solution {idx+1}')
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+def plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx):
+
+    ##Plot the 3D cameras and the 3D points
+    fig3D = plt.figure(4)
+
+    ax = plt.axes(projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+    drawRefSystem(ax, T_w_c1, '-', 'C1')
+    drawRefSystem(ax, T_w_c2, '-', 'C2')
+
+    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
+    #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "real")
+    #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    ax.legend()
+
+    #Matplotlib does not correctly manage the axis('equal')
+    xFakeBoundingBox = np.linspace(0, 4, 2)
+    yFakeBoundingBox = np.linspace(0, 4, 2)
+    zFakeBoundingBox = np.linspace(0, 4, 2)
+    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+    if (idx != 0): plt.title(f'Solution {idx}')
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
 
@@ -350,13 +379,6 @@ if __name__ == '__main__':
     img1 = cv2.cvtColor(cv2.imread('image1.png'), cv2.COLOR_BGR2RGB)
     img2 = cv2.cvtColor(cv2.imread('image2.png'), cv2.COLOR_BGR2RGB)
 
-    # T_c2_w = np.linalg.inv(T_w_c2)
-    # T_c2_c1 = np.dot(T_c2_w,T_w_c1)
-
-    # R_c2_c1 = T_c2_c1[0:3].T[0:3].T
-    # t_c2_c1 = T_c2_c1.T[-1][0:3]
-
-
 
     ####################################################################
     #####################   LABORATORY 2  ##############################
@@ -366,13 +388,8 @@ if __name__ == '__main__':
 
     E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
 
-<<<<<<< HEAD
     R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
-    print("error of R and t choosed: ", min_error)
-=======
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
     print("error of R and t chosen: ", min_error)
->>>>>>> 5af9f5dad2b6382034e00cc3a196fea2f591f4dc
 
 
     ######## visualize points with error ########
@@ -387,15 +404,9 @@ if __name__ == '__main__':
 
     points_c1 = normalize_array(points_c1_unnormalized.T).T
 
-<<<<<<< HEAD
     # calculating points in 2D from 3d to camera 2
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
     T_c1_c2 = np.linalg.inv(T_c2_c1)
-=======
-    # # calculating points in 2D from 3d to camera 2
-    # T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
-    # T_c1_c2 = np.linalg.inv(T_c2_c1)
->>>>>>> 5af9f5dad2b6382034e00cc3a196fea2f591f4dc
 
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_c1)
     P2 = np.dot(K_c, P2)
@@ -423,7 +434,6 @@ if __name__ == '__main__':
 
     ## SOLUTION OPTIMIZED
 
-    #print(OpOptim)
     theta_OPT = OpOptim.x[0:3]
     azimuth_OPT = OpOptim.x[3]
     elevation_OPT = OpOptim.x[4]
@@ -433,8 +443,8 @@ if __name__ == '__main__':
     X_computed_OPT = np.vstack((X_computed_OPT, np.ones((1, nPoints)))) # homogeneous coords
 
     # calculating points in 2D from 3d to camera 1
-    #T_c1_w = np.linalg.inv(T_w_c1)
-    T_c1_w = np.eye(4)
+    T_w_c1 = np.eye(4)
+    T_c1_w = np.linalg.inv(T_w_c1)
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
     P1 = np.dot(K_c, P1)
     
@@ -458,3 +468,5 @@ if __name__ == '__main__':
 
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
+
+    plot_3D(X_computed_OPT, X_w, T_2_1, np.eye(4),0)
