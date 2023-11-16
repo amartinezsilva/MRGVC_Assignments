@@ -366,8 +366,13 @@ if __name__ == '__main__':
 
     E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
 
+<<<<<<< HEAD
     R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
     print("error of R and t choosed: ", min_error)
+=======
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
+    print("error of R and t chosen: ", min_error)
+>>>>>>> 5af9f5dad2b6382034e00cc3a196fea2f591f4dc
 
 
     ######## visualize points with error ########
@@ -382,9 +387,15 @@ if __name__ == '__main__':
 
     points_c1 = normalize_array(points_c1_unnormalized.T).T
 
+<<<<<<< HEAD
     # calculating points in 2D from 3d to camera 2
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
     T_c1_c2 = np.linalg.inv(T_c2_c1)
+=======
+    # # calculating points in 2D from 3d to camera 2
+    # T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
+    # T_c1_c2 = np.linalg.inv(T_c2_c1)
+>>>>>>> 5af9f5dad2b6382034e00cc3a196fea2f591f4dc
 
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_c1)
     P2 = np.dot(K_c, P2)
