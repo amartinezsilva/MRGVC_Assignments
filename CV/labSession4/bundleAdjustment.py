@@ -372,6 +372,12 @@ if __name__ == '__main__':
     F_21 = np.loadtxt('F_21.txt')
 
     X_w = np.loadtxt('X_w.txt')
+
+    X_c1_w = np.zeros(X_w.shape)
+    #Bring ground truth points to camera 2 reference (fixed)
+    for i in range(X_w.shape[1]):
+        X_c1_w[:,i] = np.dot(np.linalg.inv(T_w_c1),X_w[:,i])
+
     x1Data = np.loadtxt('x1Data.txt')
     x2Data = np.loadtxt('x2Data.txt')
     x3Data = np.loadtxt('x3Data.txt')
@@ -468,5 +474,5 @@ if __name__ == '__main__':
 
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
-
-    plot_3D(X_computed_OPT, X_computed_OPT, T_w_c1, T_c2_c1,0)
+    
+    plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
