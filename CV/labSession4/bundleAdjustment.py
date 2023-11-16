@@ -374,7 +374,7 @@ if __name__ == '__main__':
     X_w = np.loadtxt('X_w.txt')
 
     X_c1_w = np.zeros(X_w.shape)
-    #Bring ground truth points to camera 2 reference (fixed)
+    #Bring ground truth points to camera 1 reference (fixed)
     for i in range(X_w.shape[1]):
         X_c1_w[:,i] = np.dot(np.linalg.inv(T_w_c1),X_w[:,i])
 
