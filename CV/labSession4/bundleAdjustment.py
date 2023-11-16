@@ -168,13 +168,13 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
     X_computed_selected = None
 
     for idx, (R, t) in enumerate(poses):
-        T_c2_to_c1 = np.eye(4)
-        T_c2_to_c1[:3, :3] = R
-        T_c2_to_c1[:3, 3] = t
-        T_c2_to_c1[3, 3] = 1
-        T_w_to_c1 = np.dot(T_w_c2, T_c2_to_c1)
+        T_c2_c1 = np.eye(4)
+        T_c2_c1[:3, :3] = R
+        T_c2_c1[:3, 3] = t
+        T_c2_c1[3, 3] = 1
+        T_w_c1 = np.dot(T_w_c2, T_c2_c1)
         
-        X_computed = triangulate_3D(x1, x2, T_w_to_c1, T_w_c2)
+        X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
 
         mean_error = np.mean(np.linalg.norm(X_w - X_computed, axis=0))
 
@@ -185,7 +185,7 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
             X_computed_selected = X_computed
 
         #visualize_results(T_w_to_c1, X_computed, X_w, idx+6)
-        plot_3D(X_computed, X_w, T_w_to_c1, T_w_c2, idx+1)
+        plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx+1)
 
     return selected_R, selected_t, min_error, X_computed_selected
 
@@ -469,4 +469,4 @@ if __name__ == '__main__':
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
 
-    plot_3D(X_computed_OPT, X_w, T_2_1, np.eye(4),0)
+    plot_3D(X_computed_OPT, X_computed_OPT, T_w_c1, T_c2_c1,0)
