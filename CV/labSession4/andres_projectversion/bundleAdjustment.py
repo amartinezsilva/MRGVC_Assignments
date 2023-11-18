@@ -225,7 +225,8 @@ def plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx):
     drawRefSystem(ax, T_w_c1, '-', 'C1')
     drawRefSystem(ax, T_w_c2, '-', 'C2')
 
-    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
+    X_computed_filtered = X_computed[:, np.all(np.abs(X_computed) <= 10, axis=0)]
+    ax.scatter(X_computed_filtered[0, :], X_computed_filtered[1, :], X_computed_filtered[2, :], marker='.', label = "estimated")
     #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
     ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
