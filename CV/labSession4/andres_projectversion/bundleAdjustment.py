@@ -478,14 +478,14 @@ if __name__ == '__main__':
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
     
     #Unscaled
-    plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
+    plot_3D(X_computed_OPT, X_w, T_w_c1, np.linalg.inv(T_2_1),0)
 
     #Recover scale with ground truth
-    scale = X_c1_w / X_computed_OPT
+    scale = X_w / X_computed_OPT
     X_computed_OPT = scale * X_computed_OPT
 
     #Plot scaled points
-    plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
+    plot_3D(X_computed_OPT, X_w, T_w_c1, np.linalg.inv(T_2_1),0)
 
 
 
