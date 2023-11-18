@@ -185,7 +185,7 @@ def compute_and_visualize_poses(E, x1, x2, X_w, T_w_c2):
             X_computed_selected = X_computed
 
         #visualize_results(T_w_to_c1, X_computed, X_w, idx+6)
-        plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx+1)
+        #plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx+1)
 
     return selected_R, selected_t, min_error, X_computed_selected
 
@@ -222,14 +222,14 @@ def plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx):
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
 
-    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+    #drawRefSystem(ax, np.eye(4, 4), '-', 'W')
     drawRefSystem(ax, T_w_c1, '-', 'C1')
     drawRefSystem(ax, T_w_c2, '-', 'C2')
 
     ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
     #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "real")
+    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
     #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
     ax.legend()
@@ -391,10 +391,18 @@ if __name__ == '__main__':
     ####################################################################
 
     F_matches = compute_f_matrix(x1Data, x2Data)
+    print("F matrix from matches:")
+    print(F_matches)
 
     E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
+    print("Essential matrix from F_matches:")
+    print(E)
 
     R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = compute_and_visualize_poses(E, x1Data, x2Data, X_w, T_w_c2)
+    T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
+
+    print("SFM recovered camera pose T_c2_c1:")
+    print(T_c2_c1)
     print("error of R and t chosen: ", min_error)
 
 
@@ -402,23 +410,18 @@ if __name__ == '__main__':
 
     # # calculating points in 2D from 3d to camera 1
     T_c1_w = np.eye(4)
-    #T_c1_w = np.linalg.inv(T_w_c1)
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
     P1 = np.dot(K_c, P1)
         
     points_c1_unnormalized = np.dot(P1,X_computed)
-
     points_c1 = normalize_array(points_c1_unnormalized.T).T
 
     # calculating points in 2D from 3d to camera 2
-    T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
     T_c1_c2 = np.linalg.inv(T_c2_c1)
-
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_c1)
     P2 = np.dot(K_c, P2)
 
     points_c2_unnormalized = np.dot(P2,X_computed)
-
     points_c2 = normalize_array(points_c2_unnormalized.T).T
 
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
@@ -455,7 +458,6 @@ if __name__ == '__main__':
     P1 = np.dot(K_c, P1)
     
     points_c1_unnormalized = np.dot(P1,X_computed_OPT)
-
     points_c1 = normalize_array(points_c1_unnormalized.T).T
 
     # calculating points in 2D from 3d to camera 2
@@ -464,15 +466,29 @@ if __name__ == '__main__':
     
     t_2_1 = t_2_1.flatten()
     T_2_1 = ensamble_T(R_2_1, t_2_1)
+    print("Optimized T_c2_c1:")
+    print(T_2_1)
 
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_2_1)
     P2 = np.dot(K_c, P2)
 
     points_c2_unnormalized = np.dot(P2,X_computed_OPT)
-
     points_c2 = normalize_array(points_c2_unnormalized.T).T
 
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
     
+    #Unscaled
     plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
+
+    #Recover scale with ground truth
+    scale = X_c1_w / X_computed_OPT
+    X_computed_OPT = scale * X_computed_OPT
+
+    #Plot scaled points
+    plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
+
+
+
+
+
