@@ -372,11 +372,8 @@ if __name__ == '__main__':
     F_21 = np.loadtxt('F_21.txt')
 
     X_w = np.loadtxt('X_w.txt')
-
-    X_c1_w = np.zeros(X_w.shape)
-    #Bring ground truth points to camera 1 reference (fixed)
-    for i in range(X_w.shape[1]):
-        X_c1_w[:,i] = np.dot(np.linalg.inv(T_w_c1),X_w[:,i])
+    # #Bring ground truth points to camera 1 reference (fixed)
+    X_c1_w = np.dot(np.linalg.inv(T_w_c1),X_w)
 
     x1Data = np.loadtxt('x1Data.txt')
     x2Data = np.loadtxt('x2Data.txt')
