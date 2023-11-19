@@ -550,19 +550,28 @@ if __name__ == '__main__':
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
     
     #Unscaled
-    # plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
-
+    #plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
+    
     #Recover scale with ground truth
     scale = X_c1_w / X_computed_OPT
-    X_computed_OPT = scale * X_computed_OPT
+    scale_factor = np.average(scale) 
+    print("Scale factor:")
+    print(scale_factor)
+
+    X_computed_OPT = X_computed_OPT / scale_factor
+    t_2_1 = t_2_1 / scale_factor
+    T_2_1 = ensamble_T(R_2_1, t_2_1)
+    print("Optimized and rescaled T_c2_c1:")
+    print(T_2_1)
 
     #Plot scaled points
-    # plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
+    plot_3D(X_computed_OPT, X_c1_w, T_w_c1, np.linalg.inv(T_2_1),0)
     
     #################
     ######## 3 ###### Perspective-N-Point pose estimation of camera three 
     #################
 
+    print("Exercise 3")
     imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
     objectPoints = np.ascontiguousarray(X_w[0:3, :].T).reshape((X_w.shape[1], 1, 3)) 
     retval, rvec, tvec  = cv2.solvePnP(objectPoints, imagePoints, K_c, distCoeffs=None ,flags=cv2.SOLVEPNP_EPNP)
@@ -571,7 +580,7 @@ if __name__ == '__main__':
     R = scipy.linalg.expm(crossMatrix(rvec))
 
     T_3_w = ensamble_T(R, tvec.flatten())
-    # plot_3D(X_w, X_w, T_w_c3, np.linalg.inv(T_3_w),0)
+    plot_3D(X_w, X_w, T_w_c3, np.linalg.inv(T_3_w),0)
 
     #################
     ######## 4 ###### Bundle adjustment from 3 views  
