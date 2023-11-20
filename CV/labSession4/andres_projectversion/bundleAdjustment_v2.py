@@ -51,17 +51,17 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
-def triangulate_3D(x1,x2,T_w_c1,T_w_c2):
+def triangulate_3D(x1,x2,T_c2_c1):
 
     n_matches = x1.shape[1]
 
+    
     # Find P matrices
-    T_c1_w = np.linalg.inv(T_w_c1)
-    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
+    T_c1_c2 = np.linalg.inv(T_c2_c1)
+    P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_c2)
     P1 = np.dot(K_c, P1)
 
-    T_c2_w = np.linalg.inv(T_w_c2)
-    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c2_w)
+    P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), np.eye(4))
     P2 = np.dot(K_c, P2)
 
     X_computed = np.zeros((4,len(X_c1_w[0][:])))
@@ -172,9 +172,8 @@ def structure_from_motion(E, x1, x2, X_w, visualize=True):
         T_c2_c1[:3, :3] = R
         T_c2_c1[:3, 3] = t
         T_c2_c1[3, 3] = 1
-        T_w_c1 = np.eye(4)
         
-        X_computed = triangulate_3D(x1, x2, T_w_c1, T_c2_c1)
+        X_computed = triangulate_3D(x1, x2, T_c2_c1)
 
         mean_error = np.mean(np.linalg.norm(X_w - X_computed, axis=0))
 
@@ -187,29 +186,6 @@ def structure_from_motion(E, x1, x2, X_w, visualize=True):
         if(visualize): plot_3D(X_computed, X_w, [T_w_c1, np.linalg.inv(T_c2_c1)], idx+1)
 
     return selected_R, selected_t, min_error, X_computed_selected
-
-def visualize_results(T_w_to_c1, X_computed, X_w, idx):
-    fig3D = plt.figure(idx)
-
-    ax = plt.axes(projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    drawRefSystem(ax, T_w_to_c1, '-', 'C1')
-
-    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', color='blue', label='triangulated')
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], color='red', marker='.', label='ground truth')
-    ax.legend()
-
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    plt.title(f'Solution {idx+1}')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
 
 def plot_3D(X_computed, X_w, transforms, idx, title="Untitled"):
 
@@ -481,7 +457,7 @@ if __name__ == '__main__':
     print("Essential matrix from F_matches:")
     print(E)
 
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, X_c1_w, visualize=False)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, X_w, visualize=True)
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
     print("SFM recovered camera pose T_c2_c1:")
@@ -562,7 +538,7 @@ if __name__ == '__main__':
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
     
     #Unscaled
-    plot_3D(X_computed_OPT, X_c1_w, [T_w_c1, np.linalg.inv(T_c2_c1)],0,"Unscaled 3D")
+    plot_3D(X_computed_OPT, X_w, [T_w_c1, np.linalg.inv(T_c2_c1)],0,"Unscaled 3D")
     
     T_GT_c1 = np.loadtxt('T_w_c1.txt')
     T_GT_c2 = np.loadtxt('T_w_c2.txt')
@@ -579,7 +555,7 @@ if __name__ == '__main__':
     print(T_c2_c1_scaled)
 
     #Plot scaled points
-    plot_3D(X_computed_OPT_scaled, X_c1_w, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
+    plot_3D(X_computed_OPT_scaled, X_w, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
     
     #################
     ######## 3 ###### Perspective-N-Point pose estimation of camera three 
@@ -597,7 +573,7 @@ if __name__ == '__main__':
     T_c3_c1 = ensamble_T(R_c3_c1, tvec.flatten())
     print("T_c3_c1:")
     print(T_c3_c1)
-    plot_3D(X_c1_w, X_c1_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
+    plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
 
     #################
     ######## 4 ###### Bundle adjustment from 3 views  
@@ -605,7 +581,7 @@ if __name__ == '__main__':
     print("Exercise 4")
     F_2_matches = compute_f_matrix(x1Data, x2Data)
     E_2 = np.linalg.multi_dot([K_c.T,F_2_matches,K_c])
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error_2, X_computed = structure_from_motion(E_2, x1Data, x2Data, X_c1_w,visualize=False)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error_2, X_computed = structure_from_motion(E_2, x1Data, x2Data, X_w,visualize=False)
 
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
@@ -671,7 +647,7 @@ if __name__ == '__main__':
     visualize_2D_points(img3, x3Data, points_c3_unnormalized)
 
     #Unscaled
-    plot_3D(X_w_computed_OPT, X_c1_w, [T_w_c1,  np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Unscaled 3D cameras 1,2,3")
+    plot_3D(X_w_computed_OPT, X_w, [T_w_c1,  np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Unscaled 3D cameras 1,2,3")
     
     #Recover scale with ground truth
     X_w_computed_OPT_scaled = X_w_computed_OPT * scale_factor
@@ -679,5 +655,5 @@ if __name__ == '__main__':
     T_c2_c1_scaled = ensamble_T(R_2_1, t_2_1_scaled)
 
     #Plot scaled points
-    plot_3D(X_w_computed_OPT_scaled, X_c1_w, [T_w_c1,  np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1,2,3")
+    plot_3D(X_w_computed_OPT_scaled, X_w, [T_w_c1,  np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1,2,3")
 
