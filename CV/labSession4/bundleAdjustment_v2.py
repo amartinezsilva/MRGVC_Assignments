@@ -188,29 +188,6 @@ def structure_from_motion(E, x1, x2, X_w, T_w_c2, visualize=True):
 
     return selected_R, selected_t, min_error, X_computed_selected
 
-def visualize_results(T_w_to_c1, X_computed, X_w, idx):
-    fig3D = plt.figure(idx)
-
-    ax = plt.axes(projection='3d', adjustable='box')
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
-
-    drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-    drawRefSystem(ax, T_w_to_c1, '-', 'C1')
-
-    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', color='blue', label='triangulated')
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], color='red', marker='.', label='ground truth')
-    ax.legend()
-
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    plt.title(f'Solution {idx+1}')
-    print('Close the figure to continue. Left button for orbit, right button for zoom.')
-    plt.show()
-
 def plot_3D(X_computed, X_w, transforms, idx, title="Untitled"):
 
     ##Plot the 3D cameras and the 3D points
