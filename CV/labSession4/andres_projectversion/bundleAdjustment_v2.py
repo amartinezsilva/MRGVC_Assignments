@@ -274,12 +274,11 @@ def resBundleProjection(Op, x1Data, x2Data, K_c, nPoints):
     X_w = np.vstack((X_w, np.ones((1, nPoints)))) # homogeneous coords
 
     # calculating points in 2D from 3d to camera 1
-    T_c1_w = np.eye(4)
+    T_c1_w = np.linalg.inv(T_w_c1)
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
     P1 = np.dot(K_c, P1)
     
     points_c1_unnormalized = np.dot(P1,X_w)
-
     points_c1 = normalize_array(points_c1_unnormalized.T).T
 
     # calculating points in 2D from 3d to camera 2
@@ -293,7 +292,6 @@ def resBundleProjection(Op, x1Data, x2Data, K_c, nPoints):
     P2 = np.dot(K_c, P2)
 
     points_c2_unnormalized = np.dot(P2,X_w)
-
     points_c2 = normalize_array(points_c2_unnormalized.T).T
 
     # we get errors
@@ -312,7 +310,6 @@ def get_2D_points(X_w, T_c_w, K_c):
 
     # Projecting points from world to camera coordinates
     points_c_unnormalized = np.dot(P, X_w)
-
     # Normalizing points
     points_c = normalize_array(points_c_unnormalized.T).T
 
@@ -340,7 +337,7 @@ def resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras):
     X_w_computed = np.vstack((X_w_computed, np.ones((1, nPoints))))  # homogeneous coords
     
     #### Residuals from Camera 1
-    points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed, np.eye(4), K_c)
+    points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed, T_c1_w, K_c)
     e = xData[0, :, :] - points_c1[0:2]
     res += e.flatten().tolist()
 
@@ -358,18 +355,6 @@ def resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras):
     points_c2_unnormalized, points_c2 = get_2D_points(X_w_computed, T, K_c)
     e = xData[1, :, :] - points_c2[0:2]
     res += e.flatten().tolist()
-
-    # #### Camera 3
-    # start_idx = 1 * 5
-    # theta = Op[start_idx:start_idx + 3]
-    # t = Op[start_idx + 3:start_idx + 6]
-
-    # R = scipy.linalg.expm(crossMatrix(theta))
-    # T = ensamble_T(R, t)
-
-    # points_c3_unnormalized, points_c3 = get_2D_points(X_w_computed, T, K_c)
-    # e = xData[2, :, :] - points_c3[0:2]
-    # res += e.flatten().tolist()
 
     #Residuals from extra cameras
     extraCameras = nCameras - 2
@@ -457,7 +442,7 @@ if __name__ == '__main__':
     print("Essential matrix from F_matches:")
     print(E)
 
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, X_w, visualize=True)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, X_w, visualize=False)
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
     print("SFM recovered camera pose T_c2_c1:")
@@ -468,7 +453,7 @@ if __name__ == '__main__':
     ######## visualize points with error ########
 
     # # calculating points in 2D from 3d to camera 1
-    T_c1_w = np.eye(4)
+    T_c1_w = np.linalg.inv(T_w_c1)
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
     P1 = np.dot(K_c, P1)
         
@@ -511,7 +496,6 @@ if __name__ == '__main__':
     X_computed_OPT = np.vstack((X_computed_OPT, np.ones((1, nPoints)))) # homogeneous coords
 
     # calculating points in 2D from 3d to camera 1
-    T_w_c1 = np.eye(4)
     T_c1_w = np.linalg.inv(T_w_c1)
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_w)
     P1 = np.dot(K_c, P1)
@@ -585,7 +569,7 @@ if __name__ == '__main__':
 
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
-    points_c1_unnormalized, points_c1 = get_2D_points(X_computed, np.eye(4), K_c)
+    points_c1_unnormalized, points_c1 = get_2D_points(X_computed, T_c1_w, K_c)
     points_c2_unnormalized, points_c2 = get_2D_points(X_computed, T_c2_c1, K_c)
     points_c3_unnormalized, points_c3 = get_2D_points(X_computed, T_c3_c1, K_c)
 
@@ -614,7 +598,7 @@ if __name__ == '__main__':
     X_w_computed_OPT = np.vstack((X_w_computed_OPT, np.ones((1, nPoints))))  # homogeneous coords
     
     #### Camera 1
-    points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed_OPT, np.eye(4), K_c)
+    points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed_OPT, T_c1_w, K_c)
     
     #### Camera 2
     theta = OpOptim.x[0:3]
