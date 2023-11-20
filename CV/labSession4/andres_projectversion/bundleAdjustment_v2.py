@@ -55,16 +55,15 @@ def triangulate_3D(x1,x2,T_c2_c1):
 
     n_matches = x1.shape[1]
 
-    
-    # Find P matrices
     T_c1_c2 = np.linalg.inv(T_c2_c1)
+    # Find P matrices
     P1 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), T_c1_c2)
     P1 = np.dot(K_c, P1)
 
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), np.eye(4))
     P2 = np.dot(K_c, P2)
 
-    X_computed = np.zeros((4,len(X_c1_w[0][:])))
+    X_computed = np.zeros((4,len(X_w[0][:])))
 
     for i in range(n_matches):
 
@@ -107,6 +106,9 @@ def triangulate_3D(x1,x2,T_c2_c1):
 
         # print("3D point SVD:")
         # print(X)
+    
+    #Bring points to camera 1 frame
+    X_computed = np.dot(T_c1_c2, X_computed)
 
     return X_computed
 
