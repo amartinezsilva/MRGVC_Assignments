@@ -180,7 +180,7 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
 
-def plot_3D(X_computed, X_w, T_w_c1, T_w_c2):
+def plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx):
 
     ##Plot the 3D cameras and the 3D points
     fig3D = plt.figure(4)
@@ -207,6 +207,7 @@ def plot_3D(X_computed, X_w, T_w_c1, T_w_c2):
     yFakeBoundingBox = np.linspace(0, 4, 2)
     zFakeBoundingBox = np.linspace(0, 4, 2)
     plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+    if (idx != 0): plt.title(f'Solution {idx}')
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
 
@@ -356,7 +357,7 @@ if __name__ == '__main__':
     #Exercise 1
 
     X_computed = triangulate_3D(x1, x2, T_w_c1, T_w_c2)
-    plot_3D(X_computed, X_w, T_w_c1, T_w_c2)
+    plot_3D(X_computed, X_w, T_w_c1, T_w_c2, 0)
 
     #Exercise 2
 
@@ -551,30 +552,32 @@ if __name__ == '__main__':
         print(mean_error)
 
         # Now, visualize the results for this solution
-        fig3D = plt.figure(idx+6)
+        plot_3D(X_computed, X_w, T_w_c1, T_w_c2, idx)
+        # # Now, visualize the results for this solution
+        # fig3D = plt.figure(idx+6)
 
-        ax = plt.axes(projection='3d', adjustable='box')
-        ax.set_xlabel('X')
-        ax.set_ylabel('Y')
-        ax.set_zlabel('Z')
+        # ax = plt.axes(projection='3d', adjustable='box')
+        # ax.set_xlabel('X')
+        # ax.set_ylabel('Y')
+        # ax.set_zlabel('Z')
 
-        drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-        drawRefSystem(ax, T_w_to_c1, '-', 'C1')
-        drawRefSystem(ax, T_w_c2, '-', 'C2')
+        # drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+        # drawRefSystem(ax, T_w_to_c1, '-', 'C1')
+        # drawRefSystem(ax, T_w_c2, '-', 'C2')
 
-        ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', color = 'blue', label = 'triangulated')
-        ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], color='red', marker='.', label = 'ground truth')
-        ax.legend()
-        #plotNumbered3DPoints(ax, X_w_calculated, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+        # ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', color = 'blue', label = 'triangulated')
+        # ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], color='red', marker='.', label = 'ground truth')
+        # ax.legend()
+        # #plotNumbered3DPoints(ax, X_w_calculated, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
-        #Matplotlib does not correctly manage the axis('equal')
-        xFakeBoundingBox = np.linspace(0, 4, 2)
-        yFakeBoundingBox = np.linspace(0, 4, 2)
-        zFakeBoundingBox = np.linspace(0, 4, 2)
-        plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-        plt.title(f'Solution {idx+1}')
-        print('Close the figure to continue. Left button for orbit, right button for zoom.')
-        plt.show()
+        # #Matplotlib does not correctly manage the axis('equal')
+        # xFakeBoundingBox = np.linspace(0, 4, 2)
+        # yFakeBoundingBox = np.linspace(0, 4, 2)
+        # zFakeBoundingBox = np.linspace(0, 4, 2)
+        # plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+        # plt.title(f'Solution {idx+1}')
+        # print('Close the figure to continue. Left button for orbit, right button for zoom.')
+        # plt.show()
 
     
     #Exercise 3
