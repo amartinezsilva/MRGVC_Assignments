@@ -88,9 +88,6 @@ public:
 
 		Intersection new_its;
 		bool intersection = scene->rayIntersect(rayR, new_its);
-		if(intersection && (new_its.mesh->isEmitter() && bsdfRecord_samp.measure != EDiscrete)) {
-
-		}
 
 		// Conditions
 		if (intersection && new_its.mesh->isEmitter()) {
