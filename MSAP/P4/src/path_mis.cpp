@@ -89,20 +89,34 @@ public:
 		Intersection new_its;
 		bool intersection = scene->rayIntersect(rayR, new_its);
 		if(intersection && (new_its.mesh->isEmitter() && bsdfRecord_samp.measure != EDiscrete)) {
-			EmitterQueryRecord new_emitterRecord;
-			new_emitterRecord.wi = rayR.d;
-			new_emitterRecord.n = new_its.shFrame.n;
-			new_emitterRecord.dist = new_its.t;
-			em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
-			
-			if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
-			else w_mat = mat_pdf;
 
+		}
+
+		// Conditions
+		if (intersection && new_its.mesh->isEmitter()) {
+			// EMITTER SAMPLING contribution
+			return Le_acc / 0.8;
+		}
+
+		EmitterQueryRecord new_emitterRecord;
+		new_emitterRecord.wi = rayR.d;
+		new_emitterRecord.n = new_its.shFrame.n;
+		new_emitterRecord.dist = new_its.t;
+		em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
+			
+		if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
+		else w_mat = mat_pdf;
+
+		if (bsdfRecord_samp.measure == EDiscrete) {
+			// BSDF contribution
 			return w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
 		}
 
+		// EMITTER SAMPLING contribution
 		Lo += Le_acc / 0.8;
-		Lo += throughput * Li(scene, sampler, rayR) / 0.8;
+
+		// BSDF contribution
+		Lo += w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
 
 		return Lo;
 
