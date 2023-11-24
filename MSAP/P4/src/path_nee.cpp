@@ -66,7 +66,7 @@ public:
 		//BSDF
 		BSDFQueryRecord bsdfRecord_samp(its.toLocal(-ray.d), its.uv);
 		Color3f throughput = its.mesh->getBSDF()->sample(bsdfRecord_samp, sampler->next2D());
-		Lo += throughput;
+		//Lo += throughput;
 
 
 		Vector3f new_dir = its.toWorld(bsdfRecord_samp.wo);
@@ -77,12 +77,13 @@ public:
 		Intersection new_its;
 		bool intersection = scene->rayIntersect(rayR, new_its);
 		if(intersection && (new_its.mesh->isEmitter() && bsdfRecord_samp.measure != EDiscrete)) {		
-			return Lo * Li(scene, sampler, rayR) / 0.8;
+			return throughput * Li(scene, sampler, rayR) / 0.8;
 		}
 
-		Lo += Le_acc;
+		Lo += Le_acc / 0.8;
+		Lo += throughput * Li(scene, sampler, rayR) / 0.8;
 
-		return Lo * Li(scene, sampler, rayR) / 0.8;
+		return Lo;
 
 	}
 
