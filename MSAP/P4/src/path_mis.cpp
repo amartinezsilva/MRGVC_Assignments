@@ -18,7 +18,7 @@ public:
 
 	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
 		Color3f Lo(0.);
-		Color3f Le_acc(0.);
+		Color3f Li_em(0.);
 
 		// Find the surface that is visible in the requested direction 
 		Intersection its;
@@ -70,7 +70,7 @@ public:
 			if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
 			else w_em = em_pdf;
 			
-			Le_acc += w_em * Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
+			Li_em += w_em * Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
 		}
 
 		em_pdf = 0.0f, mat_pdf = 0.0f;
@@ -88,36 +88,36 @@ public:
 
 		Intersection new_its;
 		bool intersection = scene->rayIntersect(rayR, new_its);
+		Color3f Le_r(0.0f);
+
 
 		// Conditions
 		if (intersection && new_its.mesh->isEmitter()) {
-			// EMITTER SAMPLING contribution
-			return Le_acc / 0.8;
+			EmitterQueryRecord new_emitterRecord;
+			new_emitterRecord.wi = rayR.d;
+			new_emitterRecord.n = new_its.shFrame.n;
+			new_emitterRecord.dist = new_its.t;
+			em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
 		}
 
-		EmitterQueryRecord new_emitterRecord;
-		new_emitterRecord.wi = rayR.d;
-		new_emitterRecord.n = new_its.shFrame.n;
-		new_emitterRecord.dist = new_its.t;
-		em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
-			
 		if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
 		else w_mat = mat_pdf;
 
 		if (bsdfRecord_samp.measure == EDiscrete) {
 			// BSDF contribution
+			//return Li_em / 0.8;
+			w_mat = 1.0 / (1.0 + em_pdf);
 			return w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
 		}
 
+
 		// EMITTER SAMPLING contribution
-		Lo += Le_acc / 0.8;
+		Lo += Li_em / 0.8;
 
 		// BSDF contribution
 		Lo += w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
 
 		return Lo;
-
-
 	}
 
 	std::string toString() const {

@@ -90,14 +90,15 @@ public:
 
 
 		// Conditions
-		if (intersection && new_its.mesh->isEmitter()) {
-			// EMITTER SAMPLING contribution
-			return Le_acc / 0.8;
-		}
 
 		if (bsdfRecord_bsdf.measure == EDiscrete) {
 			// BSDF contribution
 			return throughput * Li(scene, sampler, rayR) / 0.8;
+		}
+
+		if (intersection && new_its.mesh->isEmitter()) {
+			// EMITTER SAMPLING contribution
+			return Le_acc / 0.8;
 		}
 
 		// EMITTER SAMPLING contribution
