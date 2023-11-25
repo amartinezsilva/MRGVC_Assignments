@@ -100,7 +100,7 @@ bool RRTPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometr
 bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int> goal, 
                             std::vector<std::vector<int>>& sol){
     bool finished = false;
-    int maxIterations = 40000;
+    int maxIterations = 30000;
     int count = 0;
     //Initialize random number generator
     srand(time(NULL));
@@ -144,13 +144,12 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
 
         if(std::find(evaluated_points.begin(), evaluated_points.end(), x_new_point) != evaluated_points.end()) {
             /* v contains x */
-            std::cout<< "x_new already evaluated"<<std::endl;
+            count++;
             continue;
-        } else {
-            /* v does not contain x */
-            evaluated_points.push_back(x_new_point);
         }
-
+        
+        /* v does not contain x */
+        evaluated_points.push_back(x_new_point);
 
         TreeNode *x_new_node = new TreeNode(x_new_point);
 
@@ -163,7 +162,6 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             x_near_node -> appendChild(x_new_node);
             std::cout << "Adding node xnew to the tree: " << "\n";
             x_new_node->printNode();
-            //itr_node = x_new_node;
 
             ev_distance = distance(x_new_point[0], x_new_point[1], goal[0], goal[1]);
             std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 
@@ -172,14 +170,12 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
                 finished = true;
                 std::cout << "finished plan!" << std::endl;
             }
+            
         }
 
-        //std::cin.get(); 
-    
         count++;
     }
 
-    //sol = itr_node->returnSolution();
 
     ROS_WARN("Finished after %d iterations", count);
 
