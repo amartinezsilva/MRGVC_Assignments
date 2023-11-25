@@ -34,8 +34,8 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         max_dist_ = (std::min(width, height)/3.0);  //or any other distance within local costmap
         nh_global.param("resolution", resolution_, 0.05);
 
-        cell_width_ = int(width/resolution_);
-        cell_height_ = int(height/resolution_);
+        cell_width_ = int(16.0/resolution_);
+        cell_height_ = int(16.0/resolution_);
 
 
         costmap_ros_ = costmap_ros;
@@ -129,7 +129,7 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
         TreeNode *random_node = new TreeNode(x_rand_point);
         TreeNode *x_near_node = random_node -> neast(itr_node);
 
-        x_near_node -> setParent(itr_node);
+        //x_near_node -> setParent(itr_node);
         //itr_node -> appendChild(x_near_node);
         std::vector<int> x_near_point = x_near_node->getNode();
 
@@ -167,7 +167,7 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             x_near_node -> appendChild(x_new_node);
             std::cout << "Adding node xnew to the tree: " << "\n";
             x_new_node->printNode();
-            itr_node = x_new_node;
+            //itr_node = x_new_node;
 
             ev_distance = distance(x_new_point[0], x_new_point[1], goal[0], goal[1]);
             std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 
@@ -244,7 +244,7 @@ void RRTPlanner::getPlan(const std::vector<std::vector<int>> sol, std::vector<ge
                             pose.pose.position.x, pose.pose.position.y);
         pose.header.stamp = ros::Time::now();
         pose.header.frame_id = global_frame_id_;
-        pose.pose.orientation.w = 1;
+        pose.pose.orientation.w = 1.0;
         plan.push_back(pose);
 
     }
