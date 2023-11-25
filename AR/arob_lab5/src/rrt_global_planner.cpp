@@ -31,7 +31,7 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         double width, height;
         nh_local.param("width", width, 3.0);
         nh_local.param("height", height, 3.0);
-        max_dist_ = (std::min(width, height)/3.0);  //or any other distance within local costmap
+        max_dist_ = (std::min(width, height)/6.0);  //or any other distance within local costmap
         nh_global.param("resolution", resolution_, 0.05);
 
         cell_width_ = int(16.0/resolution_);
@@ -130,7 +130,6 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
         TreeNode *x_near_node = random_node -> neast(itr_node);
 
         //x_near_node -> setParent(itr_node);
-        //itr_node -> appendChild(x_near_node);
         std::vector<int> x_near_point = x_near_node->getNode();
 
         double ev_distance = distance(x_rand_point[0], x_rand_point[1], x_near_point[0], x_near_point[1]);
@@ -143,12 +142,20 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             x_new_point[1] = x_near_point[1] + max_cell_dist*sin(theta);
         }
 
+        if(std::find(evaluated_points.begin(), evaluated_points.end(), x_new_point) != evaluated_points.end()) {
+            /* v contains x */
+            std::cout<< "x_new already evaluated"<<std::endl;
+            continue;
+        } else {
+            /* v does not contain x */
+            evaluated_points.push_back(x_new_point);
+        }
+
+
         TreeNode *x_new_node = new TreeNode(x_new_point);
 
         if(obstacleFree(x_near_point[0], x_near_point[1], x_new_point[0], x_new_point[1])){
             //Debug
-            std::cout << "itr_node: " << "\n";
-            itr_node->printNode();
             std::cout << "Sampled node x_rand: " << "\n";
             random_node->printNode();
             std::cout << "Nearest node in tree x_near: " << "\n";
@@ -161,9 +168,9 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             ev_distance = distance(x_new_point[0], x_new_point[1], goal[0], goal[1]);
             std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 
             if(obstacleFree(x_new_point[0], x_new_point[1], goal[0], goal[1]) && ev_distance <= max_cell_dist){
-                //sol = itr_node->returnSolution();
+                sol = x_new_node->returnSolution();
                 finished = true;
-                std::cout << "finished plan!";
+                std::cout << "finished plan!" << std::endl;
             }
         }
 
@@ -172,7 +179,7 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
         count++;
     }
 
-    sol = itr_node->returnSolution();
+    //sol = itr_node->returnSolution();
 
     ROS_WARN("Finished after %d iterations", count);
 
@@ -235,7 +242,7 @@ void RRTPlanner::getPlan(const std::vector<std::vector<int>> sol, std::vector<ge
         pose.header.frame_id = global_frame_id_;
         pose.pose.orientation.w = 1.0;
         plan.push_back(pose);
-
+        //std::cout << "Wp x: " << pose.pose.position.x << " y: " << pose.pose.position.y << std::endl;
     }
 }
 
