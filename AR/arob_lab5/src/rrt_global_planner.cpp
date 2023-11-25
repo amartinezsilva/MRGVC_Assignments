@@ -24,6 +24,7 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         ros::NodeHandle nh("~/" + name);
         ros::NodeHandle nh_local("~/local_costmap/");
         ros::NodeHandle nh_global("~/global_costmap/");
+        vis_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 1.0);
 
         nh.param("maxsamples", max_samples_, 0.0);
 
@@ -32,10 +33,10 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         nh_local.param("width", width, 3.0);
         nh_local.param("height", height, 3.0);
         max_dist_ = (std::min(width, height)/6.0);  //or any other distance within local costmap
-        nh_global.param("resolution", resolution_, 0.032);
+        nh_global.param("resolution", resolution_, 0.05);
 
-        cell_width_ = int(16 / resolution_);
-        cell_height_ = int(16 / resolution_);
+        cell_width_ = int(16 / 0.032);
+        cell_height_ = int(16 / 0.032);
 
         costmap_ros_ = costmap_ros;
         costmap_ = costmap_ros->getCostmap();
@@ -107,11 +108,34 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
     std::cout << "Start x: " << start[0] << "  y: " << start[1] << "\n";
     std::cout << "Goal x: " << goal[0] << "  y: " << goal[1] << "\n";
 
+
+    visualization_msgs::Marker marker;
+    marker.header.frame_id = "map";
+    marker.header.stamp = ros::Time();
+    marker.ns = "my_namespace";
+    marker.id = 0;
+    marker.type = visualization_msgs::Marker::SPHERE;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.pose.position.x = 0;
+    marker.pose.position.y = 0;
+    marker.pose.position.z = 0;
+    marker.pose.orientation.x = 0.0;
+    marker.pose.orientation.y = 0.0;
+    marker.pose.orientation.z = 0.0;
+    marker.pose.orientation.w = 1.0;
+    marker.scale.x = 0.15;
+    marker.scale.y = 0.15;
+    marker.scale.z = 0.15;
+    marker.color.a = 1.0; // Don't forget to set the alpha!
+    marker.color.r = 0.0;
+    marker.color.g = 1.0;
+    marker.color.b = 0.0;
+
     
     // Initialize the tree with the starting point in map coordinates (root)
     TreeNode *itr_node = new TreeNode(start); 
 
-    int max_cell_dist = int(max_dist_ / resolution_);
+    int max_cell_dist = int(max_dist_ / 0.032);
 
     std::cout << "Max distance in cells: " << max_cell_dist << "\n";
 
@@ -123,6 +147,7 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
         
         int x_samp = int(rand() % cell_width_);
         int y_samp = int(rand() % cell_height_);
+        
         std::vector<int> x_rand_point{(int)x_samp,(int)y_samp};
         
         TreeNode *random_node = new TreeNode(x_rand_point);
@@ -154,13 +179,16 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
 
         if(obstacleFree(x_near_point[0], x_near_point[1], x_new_point[0], x_new_point[1])){
             //Debug
-            std::cout << "Sampled node x_rand: " << "\n";
-            random_node->printNode();
-            std::cout << "Nearest node in tree x_near: " << "\n";
-            x_near_node -> printNode();
+            // std::cout << "Sampled node x_rand: " << "\n";
+            // random_node->printNode();
+            // std::cout << "Nearest node in tree x_near: " << "\n";
+            // x_near_node -> printNode();
             x_near_node -> appendChild(x_new_node);
-            std::cout << "Adding node xnew to the tree: " << "\n";
-            x_new_node->printNode();
+            // std::cout << "Adding node xnew to the tree: " << "\n";
+            // x_new_node->printNode();
+
+            costmap_->mapToWorld(x_new_point[0], x_new_point[1], marker.pose.position.x, marker.pose.position.y);
+            vis_pub.publish( marker );
 
             ev_distance = distance(x_new_point[0], x_new_point[1], goal[0], goal[1]);
             //std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 

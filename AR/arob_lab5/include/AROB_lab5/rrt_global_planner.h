@@ -31,6 +31,7 @@ public:
                     std::vector<geometry_msgs::PoseStamped>& plan);
 
 private:
+    ros::Publisher vis_pub;
 
     costmap_2d::Costmap2DROS* costmap_ros_;
 	costmap_2d::Costmap2D* costmap_;
