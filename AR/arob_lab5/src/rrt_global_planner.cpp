@@ -32,11 +32,10 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         nh_local.param("width", width, 3.0);
         nh_local.param("height", height, 3.0);
         max_dist_ = (std::min(width, height)/6.0);  //or any other distance within local costmap
-        nh_global.param("resolution", resolution_, 0.05);
+        nh_global.param("resolution", resolution_, 0.032);
 
-        cell_width_ = int(16.0/resolution_);
-        cell_height_ = int(16.0/resolution_);
-
+        cell_width_ = int(16 / resolution_);
+        cell_height_ = int(16 / resolution_);
 
         costmap_ros_ = costmap_ros;
         costmap_ = costmap_ros->getCostmap();
@@ -164,7 +163,7 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             x_new_node->printNode();
 
             ev_distance = distance(x_new_point[0], x_new_point[1], goal[0], goal[1]);
-            std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 
+            //std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 
             if(obstacleFree(x_new_point[0], x_new_point[1], goal[0], goal[1]) && ev_distance <= max_cell_dist){
                 sol = x_new_node->returnSolution();
                 finished = true;
