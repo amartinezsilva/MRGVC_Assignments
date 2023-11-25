@@ -3,3 +3,8 @@
 *.o
 PACS/P1/eigen-3.4.0/
 *.pyc
+*.zip
+MSAP/build
+MSAP/Nori2
+MSAP/Nori2_build
+CV/LabSession3/SuperGluePretrainedNetwork
