@@ -120,7 +120,7 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
 
     //While goal is not reached
     
-    while(!finished){
+    while(!finished && count < maxIterations){
         
         int x_samp = int(rand() % cell_width_);
         int y_samp = int(rand() % cell_height_);
@@ -142,15 +142,6 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             x_new_point[0] = x_near_point[0] + max_cell_dist*cos(theta);
             x_new_point[1] = x_near_point[1] + max_cell_dist*sin(theta);
         }
-    
-        // if(std::find(evaluated_points.begin(), evaluated_points.end(), x_new_point) != evaluated_points.end()) {
-        //     /* v contains x */
-        //     std::cout<< "x_new already evaluated"<<std::endl;
-        //     continue;
-        // } else {
-        //     /* v does not contain x */
-        //     evaluated_points.push_back(x_new_point);
-        // }
 
         TreeNode *x_new_node = new TreeNode(x_new_point);
 
@@ -162,8 +153,6 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             random_node->printNode();
             std::cout << "Nearest node in tree x_near: " << "\n";
             x_near_node -> printNode();
-            
-            x_new_node -> setParent(x_near_node);
             x_near_node -> appendChild(x_new_node);
             std::cout << "Adding node xnew to the tree: " << "\n";
             x_new_node->printNode();
