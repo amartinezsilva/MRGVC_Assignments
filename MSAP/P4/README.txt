@@ -20,3 +20,9 @@ SECTION 2 COMMENT:
 The scene selected is formed by five similar diamonds made with blender and implemented as dielectric. 
 In this scene we can see different reflections of light depending on the position.
 
+There are three different renders of the scene in the section 2, one with path, another with nee and 
+a final one with mis. The mis is the best render.
+
+GOOGLE DRIVE LINK:
+
+https://drive.google.com/drive/folders/1x5_iwjG1MjngIE09G-o9HZ6LdBPlX99K?usp=sharing 
