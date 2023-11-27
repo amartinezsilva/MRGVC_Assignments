@@ -24,7 +24,7 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         ros::NodeHandle nh("~/" + name);
         ros::NodeHandle nh_local("~/local_costmap/");
         ros::NodeHandle nh_global("~/global_costmap/");
-        vis_pub = nh.advertise<visualization_msgs::Marker>("visualization_marker", 1.0);
+        vis_pub_ = nh.advertise<visualization_msgs::Marker>("/rrt_marker", 1.0);
 
         nh.param("maxsamples", max_samples_, 0.0);
 
@@ -33,7 +33,7 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         nh_local.param("width", width, 3.0);
         nh_local.param("height", height, 3.0);
         max_dist_ = (std::min(width, height)/6.0);  //or any other distance within local costmap
-        nh_global.param("resolution", resolution_, 0.05);
+        nh_global.param("resolution", resolution_, 0.032);
 
         cell_width_ = int(16 / 0.032);
         cell_height_ = int(16 / 0.032);
@@ -41,6 +41,7 @@ void RRTPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_
         costmap_ros_ = costmap_ros;
         costmap_ = costmap_ros->getCostmap();
         global_frame_id_ = costmap_ros_->getGlobalFrameID();
+    
 
         initialized_ = true;
     }
@@ -87,9 +88,7 @@ bool RRTPlanner::makePlan(const geometry_msgs::PoseStamped& start, const geometr
   	std::vector<std::vector<int>> solRRT;
     bool computed = computeRRT(point_start, point_goal, solRRT);
     if (computed){        
-        getPlan(solRRT, plan);
-        // add goal
-        plan.push_back(goal);
+        getPlan(solRRT, plan, start, goal);
     }else{
         ROS_WARN("No plan computed");
     }
@@ -107,29 +106,6 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
         
     std::cout << "Start x: " << start[0] << "  y: " << start[1] << "\n";
     std::cout << "Goal x: " << goal[0] << "  y: " << goal[1] << "\n";
-
-
-    visualization_msgs::Marker marker;
-    marker.header.frame_id = "map";
-    marker.header.stamp = ros::Time();
-    marker.ns = "my_namespace";
-    marker.id = 0;
-    marker.type = visualization_msgs::Marker::SPHERE;
-    marker.action = visualization_msgs::Marker::ADD;
-    marker.pose.position.x = 0;
-    marker.pose.position.y = 0;
-    marker.pose.position.z = 0;
-    marker.pose.orientation.x = 0.0;
-    marker.pose.orientation.y = 0.0;
-    marker.pose.orientation.z = 0.0;
-    marker.pose.orientation.w = 1.0;
-    marker.scale.x = 0.15;
-    marker.scale.y = 0.15;
-    marker.scale.z = 0.15;
-    marker.color.a = 1.0; // Don't forget to set the alpha!
-    marker.color.r = 0.0;
-    marker.color.g = 1.0;
-    marker.color.b = 0.0;
 
     
     // Initialize the tree with the starting point in map coordinates (root)
@@ -186,9 +162,6 @@ bool RRTPlanner::computeRRT(const std::vector<int> start, const std::vector<int>
             x_near_node -> appendChild(x_new_node);
             // std::cout << "Adding node xnew to the tree: " << "\n";
             // x_new_node->printNode();
-
-            costmap_->mapToWorld(x_new_point[0], x_new_point[1], marker.pose.position.x, marker.pose.position.y);
-            vis_pub.publish( marker );
 
             ev_distance = distance(x_new_point[0], x_new_point[1], goal[0], goal[1]);
             //std::cout << "Iteration: " << count << ", Distance to goal: " << ev_distance << std::endl; 
@@ -253,20 +226,68 @@ bool RRTPlanner::obstacleFree(const unsigned int x0, const unsigned int y0,
     return true;
 }
 
-void RRTPlanner::getPlan(const std::vector<std::vector<int>> sol, std::vector<geometry_msgs::PoseStamped>& plan){
+void RRTPlanner::getPlan(const std::vector<std::vector<int>> sol, std::vector<geometry_msgs::PoseStamped>& plan, const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal){
 
+    
+    visualization_msgs::Marker line_strip;
+    line_strip.header.frame_id = global_frame_id_;
+    line_strip.header.stamp = ros::Time::now();
+    line_strip.ns = "points_and_lines";
+    line_strip.action = visualization_msgs::Marker::ADD;
+    line_strip.pose.orientation.w = 1.0;
+
+    line_strip.id = 1;
+
+    line_strip.type = visualization_msgs::Marker::LINE_STRIP;
+
+    // LINE_STRIP/LINE_LIST markers use only the x component of scale, for the line width
+    line_strip.scale.x = 0.1;
+
+    // Line strip is blue
+    line_strip.color.b = 1.0;
+    line_strip.color.a = 1.0;
+    
+    //Add start
+    geometry_msgs::Point p_start;
+    p_start.z = 0.0;
+    p_start.x = start.pose.position.x;
+    p_start.y = start.pose.position.y;
+    line_strip.points.push_back(p_start);
+    
     for (auto it = sol.rbegin(); it != sol.rend(); it++){
+        geometry_msgs::Point p;
+        p.z = 0.0;
         std::vector<int> point = (*it);
         geometry_msgs::PoseStamped pose;
 
         costmap_->mapToWorld((unsigned int)point[0], (unsigned int)point[1], 
                             pose.pose.position.x, pose.pose.position.y);
+        
+        p.x = pose.pose.position.x;
+        p.y = pose.pose.position.y;
+
         pose.header.stamp = ros::Time::now();
         pose.header.frame_id = global_frame_id_;
         pose.pose.orientation.w = 1.0;
         plan.push_back(pose);
+
+        line_strip.points.push_back(p);
         //std::cout << "Wp x: " << pose.pose.position.x << " y: " << pose.pose.position.y << std::endl;
     }
+
+     
+    //Add goal
+    plan.push_back(goal);
+
+    geometry_msgs::Point p_goal;
+    p_goal.z = 0.0;
+    p_goal.x = goal.pose.position.x;
+    p_goal.y = goal.pose.position.y;
+
+    line_strip.points.push_back(p_goal);
+
+    vis_pub_.publish(line_strip);
+
 }
 
 };

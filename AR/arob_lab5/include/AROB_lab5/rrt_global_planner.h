@@ -31,7 +31,7 @@ public:
                     std::vector<geometry_msgs::PoseStamped>& plan);
 
 private:
-    ros::Publisher vis_pub;
+    ros::Publisher vis_pub_;
 
     costmap_2d::Costmap2DROS* costmap_ros_;
 	costmap_2d::Costmap2D* costmap_;
@@ -48,7 +48,7 @@ private:
     bool obstacleFree(const unsigned int x0, const unsigned int y0, const unsigned int x1, const unsigned int y1);
     bool computeRRT(const std::vector<int> start, const std::vector<int> goal, 
                             std::vector<std::vector<int>>& sol);
-    void getPlan(const std::vector<std::vector<int>> sol, std::vector<geometry_msgs::PoseStamped>& plan);
+    void getPlan(const std::vector<std::vector<int>> sol, std::vector<geometry_msgs::PoseStamped>& plan, const geometry_msgs::PoseStamped& start, const geometry_msgs::PoseStamped& goal);
 
 };
 
