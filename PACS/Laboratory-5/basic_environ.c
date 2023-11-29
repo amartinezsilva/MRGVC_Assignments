@@ -139,20 +139,19 @@ int main(int argc, char** argv)
   cl_error(err, "Failed to create kernel from the program\n");
 
   // 5. Create and initialize input and output arrays at host memory
-  cl_float input_array[];
-  clo_float output_array[];
+  float input_array[1024]; //???//
+  float output_array[1024];
 
   // 6. Create OpenCL buffer visible to the OpenCl runtime
-  cl_mem in_device_object  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(cl_float)*NUM_DATA, NULL, &err);
+  cl_mem in_device_object  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(input_array), NULL, &err);
   cl_error(err, "Failed to create memory buffer at device\n");
-  cl_mem out_device_object = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(cl_float)*NUM_DATA, NULL, &err);
+  cl_mem out_device_object = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(output_array), NULL, &err);
   cl_error(err, "Failed to create memory buffer at device\n");
 
 
   // 7. Write data into the memory object 
-  float v_host[NUM_DATA]={…};
   err = clEnqueueWriteBuffer(command_queue, in_device_object, CL_TRUE, 0, sizeof(float) * count, \\
-                             v_host, 0, NULL, NULL);
+                             &input_array, 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a write command\n");
 
   // 8. Set the arguments to the kernel
@@ -166,14 +165,14 @@ int main(int argc, char** argv)
 
 
   // 9. Launch Kernel
-  local_size = 128;
-  global_size = NUM_DATA;
+  local_size = 128; //Number of workitems in a workgroup
+  global_size = 1024; //Total number of workitems
   err = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
   cel_error(err, "Failed to launch kernel to the device\n");
 
 
   // 10. Read data form device memory back to host memory
-  err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0, &data, 0, NULL, NULL);
+  err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0, &output_array, 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a read command\n");
 
   
