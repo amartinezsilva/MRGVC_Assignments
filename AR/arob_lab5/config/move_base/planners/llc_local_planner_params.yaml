@@ -1,0 +1,6 @@
+LLCLocalPlanner:
+  kalpha: 1.25
+  krho: 0.25
+  kbeta: -0.1
+  rho_th: 0.15
+
