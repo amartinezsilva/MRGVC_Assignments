@@ -129,7 +129,7 @@ if __name__ == '__main__':
     ##Use for loop to get all v for every u, v point, thren translate to world and unproject to check
 
     npoints = x1Data.shape[1]
-    X_triangulated = np.zeros((4, npoints))
+    X_triangulated_c2 = np.zeros((4, npoints))
     for i in range(npoints):
 
         u1_c1 = x1Data[:,i].reshape(3,1)
@@ -158,23 +158,26 @@ if __name__ == '__main__':
 
         X = X / X[3][:] 
 
-        X_triangulated[0][i] = X[0,:]
-        X_triangulated[1][i] = X[1,:]
-        X_triangulated[2][i] = X[2,:]
-        X_triangulated[3][i] = X[3,:]
+        X_triangulated_c2[0][i] = X[0,:]
+        X_triangulated_c2[1][i] = X[1,:]
+        X_triangulated_c2[2][i] = X[2,:]
+        X_triangulated_c2[3][i] = X[3,:]
 
 
-    print(X_triangulated)
+    print(X_triangulated_c2)
+    X_triangulated_w = np.dot(T_wc2, X_triangulated_c2)
+    X_triangulated_c1 = np.dot(np.linalg.inv(T_wc1), X_triangulated_w)
 
     #Check with projection model with one point
 
     i = 10
-    X1 = X_triangulated[:,i].reshape(4,1)
-    u1_c1 = kannala_projection(K_1, X1, D1_k_array)
+    X1_c1 = X_triangulated_c1[:,i].reshape(4,1)
+    X1_c2 = X_triangulated_c2[:,i].reshape(4,1)
+    u1_c1 = kannala_projection(K_1, X1_c1, D1_k_array)
     print("Projection triangulated first point in C1")
     print(u1_c1)
     print("Projection triangulated first point in C2")
-    u1_c2 = kannala_projection(K_2, X1, D2_k_array)
+    u1_c2 = kannala_projection(K_2, X1_c2, D2_k_array)
     print(u1_c2)
 
 
@@ -184,16 +187,20 @@ if __name__ == '__main__':
     u_c2 = np.zeros((3,npoints))
 
     for i in range(npoints):
-        X = X_triangulated[:,i].reshape(4,1)
-        u_c1_p = kannala_projection(K_1, X, D1_k_array)
+        X_c1 = X_triangulated_c1[:,i].reshape(4,1)
+        X_c2 = X_triangulated_c2[:,i].reshape(4,1)
+
+        u_c1_p = kannala_projection(K_1, X_c1, D1_k_array)
 
         u_c1[0][i] = u_c1_p[0,:]
         u_c1[1][i] = u_c1_p[1,:]
         u_c1[2][i] = u_c1_p[2,:]
 
-        u_c2_p = kannala_projection(K_2, X, D2_k_array)
+        u_c2_p = kannala_projection(K_2, X_c2, D2_k_array)
 
         u_c2[0][i] = u_c2_p[0,:]
         u_c2[1][i] = u_c2_p[1,:]
         u_c2[2][i] = u_c2_p[2,:]
     
+    np.savetxt('x1Data_tri.txt', u_c1)
+    np.savetxt('x2Data_tri.txt', u_c2)
