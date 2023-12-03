@@ -82,7 +82,7 @@ def kannala_unprojection(K_c, u, D):
     theta = np.roots([k4, 0, k3, 0, k2, 0, k1, 0, 1, -r])
     theta = float(np.real(theta[np.isreal(theta)]))
 
-    v = np.array([[np.sin(theta) * np.cos(phi)], [np.sin(theta) * np.sin(phi)], [np.cos(phi)]]).reshape(3,1)
+    v = np.array([[np.sin(theta) * np.cos(phi)], [np.sin(theta) * np.sin(phi)], [np.cos(theta)]]).reshape(3,1)
 
     return v
 
@@ -196,7 +196,7 @@ if __name__ == '__main__':
         u, s, vh = np.linalg.svd(A)
         X = np.reshape(vh[-1, :],(4,1))
 
-        X = X / X[3][:] 
+        X = X / X[3,:] 
 
         X_triangulated_c2[0][i] = X[0,:]
         X_triangulated_c2[1][i] = X[1,:]
