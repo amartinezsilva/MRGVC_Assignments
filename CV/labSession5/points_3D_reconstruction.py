@@ -20,6 +20,33 @@ import scipy
 import scipy.optimize as scOptim
 import cv2
 
+def draw3DLine(ax, xIni, xEnd, strStyle, lColor, lWidth):
+    """
+    Draw a segment in a 3D plot
+    -input:
+        ax: axis handle
+        xIni: Initial 3D point.
+        xEnd: Final 3D point.
+        strStyle: Line style.
+        lColor: Line color.
+        lWidth: Line width.
+    """
+    ax.plot([np.squeeze(xIni[0]), np.squeeze(xEnd[0])], [np.squeeze(xIni[1]), np.squeeze(xEnd[1])], [np.squeeze(xIni[2]), np.squeeze(xEnd[2])],
+            strStyle, color=lColor, linewidth=lWidth)
+    
+def drawRefSystem(ax, T_w_c, strStyle, nameStr):
+    """
+        Draw a reference system in a 3D plot: Red for X axis, Green for Y axis, and Blue for Z axis
+    -input:
+        ax: axis handle
+        T_w_c: (4x4 matrix) Reference system C seen from W.
+        strStyle: lines style.
+        nameStr: Name of the reference system.
+    """
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 0:1], strStyle, 'r', 1)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 1:2], strStyle, 'g', 1)
+    draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
+    ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
 def visualize_2D_points(image, real_points, estimated_points):
     """
@@ -97,6 +124,216 @@ def calculate_planes_from_v(v):
 
     return pi_sym, pi_perp
 
+def crossMatrixInv(M):     
+  x = [M[2, 1], M[0, 2], M[1, 0]]     
+  return x  
+
+def crossMatrix(x):     
+  M = np.array([[0, -x[2], x[1]],                   
+                [x[2], 0, -x[0]],                   
+                [-x[1], x[0], 0]], dtype="object")     
+  return M 
+
+def normalize_array(x_unnormalized) -> np.array:
+    x_normalized = x_unnormalized
+    for i in range(len(x_normalized)):
+        x_normalized[i] = x_unnormalized[i]/x_unnormalized[i][2]
+    return x_normalized
+
+def ensamble_T(R_w_c, t_w_c) -> np.array:
+    """
+    Ensamble the a SE(3) matrix with the rotation matrix and translation vector.
+    """
+    T_w_c = np.zeros((4, 4))
+    T_w_c[0:3, 0:3] = R_w_c
+    T_w_c[0:3, 3] = t_w_c
+    T_w_c[3, 3] = 1
+    return T_w_c
+
+def get_2D_points(X_w, T_c_w, K_c):
+
+    # Transformation from world to camera coordinates
+    P = np.dot(np.concatenate((np.identity(3), np.array([[0], [0], [0]])), axis=1), T_c_w)
+    P = np.dot(K_c, P)
+
+    # Projecting points from world to camera coordinates
+    points_c_unnormalized = np.dot(P, X_w)
+    # Normalizing points
+    points_c = normalize_array(points_c_unnormalized.T).T
+
+    return points_c_unnormalized, points_c
+
+def plot_3D(X_computed, X_w, transforms, idx, title="Untitled"):
+
+    ##Plot the 3D cameras and the 3D points
+    fig3D = plt.figure(4)
+
+    ax = plt.axes(projection='3d', adjustable='box')
+    ax.set_xlabel('X')
+    ax.set_ylabel('Y')
+    ax.set_zlabel('Z')
+
+    for cam_idx,T_w_c in enumerate(transforms):
+    #drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+        drawRefSystem(ax, T_w_c, '-', 'C'+str(cam_idx+1))
+
+    #Plot only provided GT
+    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
+    #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options) 
+    
+    #Plot points for comparison
+    if(not (X_computed == X_w).all()):
+        ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
+        #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
+
+    ax.legend()
+
+    #Matplotlib does not correctly manage the axis('equal')
+    xFakeBoundingBox = np.linspace(0, 4, 2)
+    yFakeBoundingBox = np.linspace(0, 4, 2)
+    zFakeBoundingBox = np.linspace(0, 4, 2)
+    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
+    if (idx != 0): plt.title(f'Solution {idx}')
+    else: plt.title(title)
+
+    print('Close the figure to continue. Left button for orbit, right button for zoom.')
+    plt.show()
+
+def resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras):
+    """
+    -input:
+    Op: Optimization parameters for all cameras and 3D points
+    xData: (3 x nPoints x nCameras) 2D points for all cameras (homogeneous coordinates)
+    K_c: (3 x 3) Intrinsic calibration matrix
+    nPoints: Number of points
+    nCameras: Number of cameras
+    -output:
+    res: residuals from the error between the 2D matched points and the projected points from the 3D points
+    (2 equations/residuals per 2D point)
+    """
+    X_w_list = []
+
+    res = []
+    idx = 0
+    X_w_list = Op[(5 + (nCameras-1) * 6):]
+    X_w_computed = np.array(X_w_list).reshape((3, nPoints))
+    X_w_computed = np.vstack((X_w_computed, np.ones((1, nPoints))))  # homogeneous coords
+    
+    #### Residuals from Camera 1
+    points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed, np.eye(4), K_c)
+    e = xData[0, :, :] - points_c1[0:2]
+    res += e.flatten().tolist()
+
+    #### Residuals from Camera 2
+    theta = Op[0:3]
+    azimuth = Op[3]
+    elevation = Op[4]
+    idx+=5
+
+    R = scipy.linalg.expm(crossMatrix(theta))
+    t = np.array([[np.sin(elevation)*np.cos(azimuth)], [np.sin(elevation)*np.sin(azimuth)], [np.cos(elevation)]]).reshape((3,1))
+    t = t.flatten()
+    T = ensamble_T(R, t)
+
+    points_c2_unnormalized, points_c2 = get_2D_points(X_w_computed, T, K_c)
+    e = xData[1, :, :] - points_c2[0:2]
+    res += e.flatten().tolist()
+
+    #Residuals from extra cameras
+    extraCameras = nCameras - 2
+    for i in range(extraCameras):
+        theta = Op[idx:idx + 3]
+        t = Op[idx + 3:idx + 6]
+        R = scipy.linalg.expm(crossMatrix(theta))
+        T = ensamble_T(R, t)
+        points_unnormalized, points = get_2D_points(X_w_computed, T, K_c)
+        e = xData[2+i, :, :] - points[0:2]
+        res += e.flatten().tolist()
+
+    return res
+
+def resBundleProjectionFisheye(Op, xData, K_1, K_2, D_1, D_2, nPoints):     
+    """     
+    -input:         
+    Op: Optimization parameters: this must include a paramtrization for T_21 (reference 1 seen from reference 2)             
+    in a proper way and for X1 (3D points in ref 1)         
+    x1Data: (3xnPoints) 2D points on image 1 (homogeneous coordinates)         
+    x2Data: (3xnPoints) 2D points on image 2 (homogeneous coordinates) 
+    K_c: (3x3) Intrinsic calibration matrix         
+    nPoints: Number of points     
+    -output:         
+    res: residuals from the error between the 2D matched points and the projected points from the 3D points               
+    (2 equations/residuals per 2D point)             
+    """ 
+    theta = Op[0:3]
+    azimuth = Op[3]
+    elevation = Op[4]
+    X_w_list = Op[5:]
+
+    res = []
+    X_triangulated_wA = np.array(X_w_list).reshape((3, nPoints))
+    X_triangulated_wA = np.vstack((X_triangulated_wA, np.ones((1, nPoints)))) # homogeneous coords
+
+    # calculating points in 2D from 3d to camera 2
+    R_wBwA = scipy.linalg.expm(crossMatrix(theta))
+    t_wBwA = np.array([[np.sin(elevation)*np.cos(azimuth)], [np.sin(elevation)*np.sin(azimuth)], [np.cos(elevation)]]).reshape((3,1))
+    
+    t_wBwA = t_wBwA.flatten()
+    T_wBwA = ensamble_T(R_wBwA, t_wBwA)
+
+    X_triangulated_c2A = np.dot(np.linalg.inv(T_wc2), X_triangulated_wA)
+    X_triangulated_c1A = np.dot(T_leftright, X_triangulated_c2A)
+    X_triangulated_wB = np.dot(T_wBwA, X_triangulated_wA)
+    X_triangulated_c2B = np.dot(np.linalg.inv(T_wc2), X_triangulated_wB)
+    X_triangulated_c1B = np.dot(T_leftright, X_triangulated_c2B)
+
+    x1Data_tri = np.zeros((3,npoints))
+    x2Data_tri = np.zeros((3,npoints))
+    x3Data_tri = np.zeros((3,npoints))
+    x4Data_tri = np.zeros((3,npoints))
+
+    for i in range(npoints):
+
+        X_c1A = X_triangulated_c1A[:,i].reshape(4,1)
+        X_c2A = X_triangulated_c2A[:,i].reshape(4,1)
+        X_c2B = X_triangulated_c2B[:,i].reshape(4,1)
+        X_c1B = X_triangulated_c1B[:,i].reshape(4,1)
+
+        u_1a = kannala_projection(K_1, X_c1A, D_1)
+
+        x1Data_tri[0,i] = u_1a[0,:]
+        x1Data_tri[1,i] = u_1a[1,:]
+        x1Data_tri[2,i] = u_1a[2,:]
+
+        u_2a = kannala_projection(K_2, X_c2A, D_2)
+
+        x2Data_tri[0,i] = u_2a[0,:]
+        x2Data_tri[1,i] = u_2a[1,:]
+        x2Data_tri[2,i] = u_2a[2,:]
+
+
+        u_1b = kannala_projection(K_1, X_c1B, D_1)
+
+        x3Data_tri[0,i] = u_1b[0,:]
+        x3Data_tri[1,i] = u_1b[1,:]
+        x3Data_tri[2,i] = u_1b[2,:]
+
+        u_2b = kannala_projection(K_2, X_c2B, D_2)
+
+        x4Data_tri[0,i] = u_2b[0,:]
+        x4Data_tri[1,i] = u_2b[1,:]
+        x4Data_tri[2,i] = u_2b[2,:]
+    
+    # we get errors
+    e1 = xData[0, :, :] - x1Data_tri[:,:]
+    e2 = xData[1, :, :] - x2Data_tri[:,:]
+    e3 = xData[2, :, :] - x3Data_tri[:,:]
+    e4 = xData[3, :, :] - x4Data_tri[:,:]
+    
+    res = e1.flatten().tolist() + e2.flatten().tolist() + e3.flatten().tolist() + e4.flatten().tolist()
+   
+    return res
+
 if __name__ == '__main__':
 
     T_leftright = np.loadtxt('T_leftright.txt')
@@ -111,7 +348,7 @@ if __name__ == '__main__':
     x1Data = np.loadtxt('x1.txt')
     x2Data = np.loadtxt('x2.txt')
     x3Data = np.loadtxt('x3.txt')
-    x3Data = np.loadtxt('x4.txt')
+    x4Data = np.loadtxt('x4.txt')
 
     fisheye1_frameA = cv2.cvtColor(cv2.imread('fisheye1_frameA.png'), cv2.COLOR_BGR2RGB)
     fisheye1_frameB = cv2.cvtColor(cv2.imread('fisheye1_frameB.png'), cv2.COLOR_BGR2RGB)
@@ -204,7 +441,7 @@ if __name__ == '__main__':
         X_triangulated_c2[3][i] = X[3,:]
 
 
-    X_triangulated_w = np.dot(T_wc2, X_triangulated_c2)
+    X_triangulated_wA = np.dot(T_wc2, X_triangulated_c2)
     X_triangulated_c1 = np.dot(T_leftright, X_triangulated_c2)
     #X_triangulated_c1 = np.dot(np.linalg.inv(T_wc1), X_triangulated_w)
 
@@ -217,7 +454,6 @@ if __name__ == '__main__':
 
         X_c1 = X_triangulated_c1[:,i].reshape(4,1)
         X_c2 = X_triangulated_c2[:,i].reshape(4,1)
-        X_w = X_triangulated_w[:,i].reshape(4,1)
 
         u_1 = kannala_projection(K_1, X_c1, D1_k_array)
 
@@ -237,3 +473,149 @@ if __name__ == '__main__':
 
     visualize_2D_points(fisheye1_frameA, x1Data, x1Data_tri)
     visualize_2D_points(fisheye2_frameA, x2Data, x2Data_tri)
+
+    ####################### Optional : Bundle Adjustment ###################################
+    ########################################################################################
+
+    print("Exercise 3")
+    
+    ################ Start from seed #######################
+    T_wBwA_seed = np.linalg.inv(T_wAwB_seed)
+    T_wBwA_gt = np.linalg.inv(T_wAwB_gt)
+
+    print("T_wBwA before optimization:")
+    print(T_wBwA_seed)
+
+    points_c1 = x1Data_tri
+    points_c2 = x2Data_tri
+    
+    x3Data_tri = np.zeros((3,npoints))
+    x4Data_tri = np.zeros((3,npoints))
+
+    #Use forward model with triangulated points on B
+    X_triangulated_wB = np.dot(T_wBwA_seed, X_triangulated_wA)
+    X_triangulated_c2B = np.dot(np.linalg.inv(T_wc2), X_triangulated_wB)
+    X_triangulated_c1B = np.dot(T_leftright, X_triangulated_c2B)
+
+    for i in range(npoints):
+
+        X_c1B = X_triangulated_c1B[:,i].reshape(4,1)
+        X_c2B = X_triangulated_c2B[:,i].reshape(4,1)
+
+        u_1 = kannala_projection(K_1, X_c1B, D1_k_array)
+
+        x3Data_tri[0,i] = u_1[0,:]
+        x3Data_tri[1,i] = u_1[1,:]
+        x3Data_tri[2,i] = u_1[2,:]
+
+        u_2 = kannala_projection(K_2, X_c2B, D2_k_array)
+
+        x4Data_tri[0,i] = u_2[0,:]
+        x4Data_tri[1,i] = u_2[1,:]
+        x4Data_tri[2,i] = u_2[2,:]
+    
+    points_c3 = x3Data_tri
+    points_c4 = x4Data_tri
+
+    ### Visualize reprojected points in other camera before bundle adjustment using seed ##############
+   
+    visualize_2D_points(fisheye1_frameB, x3Data, points_c3)
+    visualize_2D_points(fisheye2_frameB, x4Data, points_c4)
+
+    ############## Now perform bundle adjustment ###########################
+
+    xData = np.array([x1Data, x2Data, x3Data, x4Data])
+
+    R_wBwA_seed = T_wBwA_seed[0:3,0:3]
+    t_wBwA_seed = T_wBwA_seed[0:3,3]
+
+    theta = crossMatrixInv(scipy.linalg.logm(R_wBwA_seed)) 
+    elevation = np.arccos(t_wBwA_seed[2])
+    azimuth = np.arcsin(t_wBwA_seed[0] / np.sin(elevation))
+
+    Op = theta+[azimuth, elevation] + X_triangulated_wA[:3].flatten().tolist()
+
+    res = resBundleProjectionFisheye(Op, xData, K_1, K_2, D1_k_array, D2_k_array, npoints)
+
+    OpOptim = scOptim.least_squares(resBundleProjectionFisheye, Op, args=(xData, K_1, K_2, D1_k_array, D2_k_array, npoints), method='lm')
+    
+     ## SOLUTION OPTIMIZED
+    theta_OPT = OpOptim.x[0:3]
+    azimuth_OPT = OpOptim.x[3]
+    elevation_OPT = OpOptim.x[4]
+    X_computed_OPT_list = OpOptim.x[5:]
+
+    X_computed_OPT = np.array(X_computed_OPT_list).reshape((3, npoints))
+    X_computed_OPT = np.vstack((X_computed_OPT, np.ones((1, npoints)))) # homogeneous coords
+
+    # calculating points in 2D from 3d to camera 2
+    R_wBwA = scipy.linalg.expm(crossMatrix(theta_OPT))
+    t_wBwA = np.array([[np.sin(elevation_OPT)*np.cos(azimuth_OPT)], [np.sin(elevation_OPT)*np.sin(azimuth_OPT)], [np.cos(elevation_OPT)]]).reshape((3,1))
+    
+    t_wBwA = t_wBwA.flatten()
+    t_wAwB_gt = T_wAwB_gt[:3, 3]
+    scale_factor = np.linalg.norm(t_wAwB_gt)
+    X_computed_OPT_scaled = X_computed_OPT * scale_factor
+    t_wBwA_scaled = t_wBwA * scale_factor
+
+    T_wBwA = ensamble_T(R_wBwA, t_wBwA_scaled)
+    print("Optimized and scaled T_wBwA:")
+    print(T_wBwA)
+
+    #Use forward model to project optimized points
+    #Use forward model with triangulated points on B
+    X_triangulated_wA = X_computed_OPT_scaled
+    X_triangulated_wB = np.dot(T_wBwA, X_triangulated_wA)
+    X_triangulated_c2B = np.dot(np.linalg.inv(T_wc2), X_triangulated_wB)
+    X_triangulated_c1B = np.dot(T_leftright, X_triangulated_c2B)
+    X_triangulated_c2A = np.dot(np.linalg.inv(T_wc2), X_triangulated_wA)
+    X_triangulated_c1A = np.dot(T_leftright, X_triangulated_c2A)
+
+
+    x1Data_tri = np.zeros((3,npoints))
+    x2Data_tri = np.zeros((3,npoints))
+    x3Data_tri = np.zeros((3,npoints))
+    x4Data_tri = np.zeros((3,npoints))
+
+    for i in range(npoints):
+
+        X_c1A = X_triangulated_c1A[:,i].reshape(4,1)
+        X_c2A = X_triangulated_c2A[:,i].reshape(4,1)
+        X_c2B = X_triangulated_c2B[:,i].reshape(4,1)
+        X_c1B = X_triangulated_c1B[:,i].reshape(4,1)
+
+        u_1a = kannala_projection(K_1, X_c1A, D1_k_array)
+
+        x1Data_tri[0,i] = u_1a[0,:]
+        x1Data_tri[1,i] = u_1a[1,:]
+        x1Data_tri[2,i] = u_1a[2,:]
+
+        u_2a = kannala_projection(K_2, X_c2A, D2_k_array)
+
+        x2Data_tri[0,i] = u_2a[0,:]
+        x2Data_tri[1,i] = u_2a[1,:]
+        x2Data_tri[2,i] = u_2a[2,:]
+
+        u_1b = kannala_projection(K_1, X_c1B, D1_k_array)
+
+        x3Data_tri[0,i] = u_1b[0,:]
+        x3Data_tri[1,i] = u_1b[1,:]
+        x3Data_tri[2,i] = u_1b[2,:]
+
+        u_2b = kannala_projection(K_2, X_c2B, D2_k_array)
+
+        x4Data_tri[0,i] = u_2b[0,:]
+        x4Data_tri[1,i] = u_2b[1,:]
+        x4Data_tri[2,i] = u_2b[2,:]
+    
+    
+    points_c1 = x1Data_tri
+    points_c2 = x2Data_tri
+    points_c3 = x3Data_tri
+    points_c4 = x4Data_tri
+
+    #Visualize points cameras afters bundle adjustment
+    visualize_2D_points(fisheye1_frameA, x1Data, points_c1)
+    visualize_2D_points(fisheye2_frameA, x2Data, points_c2)
+    visualize_2D_points(fisheye1_frameB, x3Data, points_c3)
+    visualize_2D_points(fisheye2_frameB, x4Data, points_c4)
