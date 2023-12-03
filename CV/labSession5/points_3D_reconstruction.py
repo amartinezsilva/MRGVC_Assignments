@@ -210,8 +210,8 @@ if __name__ == '__main__':
 
     #Check with projection model for all points
 
-    u_1 = np.zeros((3,npoints))
-    u_2 = np.zeros((3,npoints))
+    x1Data_tri = np.zeros((3,npoints))
+    x2Data_tri = np.zeros((3,npoints))
 
     for i in range(npoints):
 
@@ -219,21 +219,21 @@ if __name__ == '__main__':
         X_c2 = X_triangulated_c2[:,i].reshape(4,1)
         X_w = X_triangulated_w[:,i].reshape(4,1)
 
-        u_1_p = kannala_projection(K_1, X_c1, D1_k_array)
+        u_1 = kannala_projection(K_1, X_c1, D1_k_array)
 
-        u_1[0,i] = u_1_p[0,:]
-        u_1[1,i] = u_1_p[1,:]
-        u_1[2,i] = u_1_p[2,:]
+        x1Data_tri[0,i] = u_1[0,:]
+        x1Data_tri[1,i] = u_1[1,:]
+        x1Data_tri[2,i] = u_1[2,:]
 
-        u_2_p = kannala_projection(K_2, X_c2, D2_k_array)
+        u_2 = kannala_projection(K_2, X_c2, D2_k_array)
 
-        u_2[0,i] = u_2_p[0,:]
-        u_2[1,i] = u_2_p[1,:]
-        u_2[2,i] = u_2_p[2,:]
+        x2Data_tri[0,i] = u_2[0,:]
+        x2Data_tri[1,i] = u_2[1,:]
+        x2Data_tri[2,i] = u_2[2,:]
 
     
-    np.savetxt('x1Data_tri.txt', u_1)
-    np.savetxt('x2Data_tri.txt', u_2)
+    np.savetxt('x1Data_tri.txt', x1Data_tri)
+    np.savetxt('x2Data_tri.txt', x2Data_tri)
 
-    visualize_2D_points(fisheye1_frameA, x1Data, u_1)
-    visualize_2D_points(fisheye2_frameA, x2Data, u_2)
+    visualize_2D_points(fisheye1_frameA, x1Data, x1Data_tri)
+    visualize_2D_points(fisheye2_frameA, x2Data, x2Data_tri)
