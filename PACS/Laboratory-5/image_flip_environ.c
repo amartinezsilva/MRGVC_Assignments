@@ -6,7 +6,7 @@
 // 
 ////////////////////////////////////////////////////////////////////
 #define cimg_use_jpeg
-#include "CImg.h"
+#include "CIMg/CImg.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
   printf("Kernel created\n");
 
   // Create and initialize the input and output arrays at the host memory
-  CImg<unsigned char> image("lenna.png");
+  CImg<unsigned char> image("image.jpg");
 
   // Create OpenCL image memory objects
   cl_image_format format;
