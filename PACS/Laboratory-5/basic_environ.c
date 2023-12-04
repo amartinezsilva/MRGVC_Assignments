@@ -36,6 +36,9 @@ void cl_error(cl_int code, const char *string){
 
 int main(int argc, char** argv)
 {
+  cl_event start, end;
+
+
   int err;                            	// error code returned from api calls
   size_t t_buf = 50;			// size of str_buffer
   char str_buffer[t_buf];		// auxiliary buffer	
@@ -54,6 +57,9 @@ int main(int argc, char** argv)
   cl_device_id device_id;             				// compute device id 
   cl_context context;                 				// compute context
   cl_command_queue command_queue;     				// compute command queue
+
+  // Before the program execution
+  clEnqueueMarker(command_queue, &start);
     
 
   // 1. Scan the available platforms:
@@ -195,10 +201,21 @@ int main(int argc, char** argv)
   
 
   // 6. Create OpenCL buffer visible to the OpenCl runtime
+  cl_ulong total_memory_allocated = 0;
+
   cl_mem in_device_object  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(unsigned char)*size, NULL, &err);
   cl_error(err, "Failed to create memory buffer at device\n");
+  cl_ulong in_device_mem_size;
+  clGetMemObjectInfo(in_device_object, CL_MEM_SIZE, sizeof(cl_ulong), &in_device_mem_size, NULL);
+  total_memory_allocated += in_device_mem_size;
+
   cl_mem out_device_object = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(unsigned char)*size, NULL, &err);
   cl_error(err, "Failed to create memory buffer at device\n");
+  cl_ulong out_device_mem_size;
+  clGetMemObjectInfo(out_device_object, CL_MEM_SIZE, sizeof(cl_ulong), &out_device_mem_size, NULL);
+  total_memory_allocated += out_device_mem_size;
+
+  printf("Memory Footprint of the Program: %lu bytes\n", total_memory_allocated);
 
 
   // 7. Write data into the memory object
@@ -210,21 +227,35 @@ int main(int argc, char** argv)
   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &in_device_object);
   cl_error(err, "Failed to set argument 0\n");
   err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &out_device_object);
-  err = clSetKernelArg(kernel, 2, sizeof(width), &width);
+  err = clSetKernelArg(kernel, 2, sizeof(int), &width);
   cl_error(err, "Failed to set argument 1\n");
-  err = clSetKernelArg(kernel, 3, sizeof(height), &height);
+  err = clSetKernelArg(kernel, 3, sizeof(int), &height);
   cl_error(err, "Failed to set argument 2\n");
   float angle = 1.570796;
-  err = clSetKernelArg(kernel, 4, sizeof(angle), &angle);
+  err = clSetKernelArg(kernel, 4, sizeof(float), &angle);
   cl_error(err, "Failed to set argument 3\n");
 
   // 9. Launch Kernel
   
+  // Before the kernel execution
+  clEnqueueMarker(command_queue, &start);
+
   const size_t global_size[3] = {image.width() , image.height(), image.spectrum()};
   // printf("Local size: %d\n", local_size);
   // printf("Global size: %d\n", global_size);
   err = clEnqueueNDRangeKernel(command_queue, kernel, 3, NULL, global_size, NULL, 0, NULL, NULL);
   cl_error(err, "Failed to launch kernel to the device\n");
+
+  // After the kernel execution
+  clEnqueueMarker(command_queue, &end);
+  clEnqueueWaitForEvents(command_queue, 1, &end);
+
+  cl_ulong kernel_time_start, kernel_time_end;
+  clGetEventProfilingInfo(start, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &kernel_time_start, NULL);
+  clGetEventProfilingInfo(end, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_time_end, NULL);
+
+  double kernel_execution_time = (double)(kernel_time_end - kernel_time_start) * 1.0e-9; // convert to seconds
+  printf("Kernel Execution Time: %f seconds\n", kernel_execution_time);
 
 
   // 10. Read data form device memory back to host memory
@@ -232,6 +263,32 @@ int main(int argc, char** argv)
   err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0,sizeof(unsigned char)*size, image_out.data(), 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a read command\n");
   
+
+  // After the program execution
+  clEnqueueMarker(command_queue, &end);
+  clEnqueueWaitForEvents(command_queue, 1, &end);
+
+  cl_ulong program_time_start, program_time_end;
+  clGetEventProfilingInfo(start, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &program_time_start, NULL);
+  clGetEventProfilingInfo(end, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &program_time_end, NULL);
+
+  double program_execution_time = (double)(program_time_end - program_time_start) * 1.0e-9; // convert to seconds
+  printf("Overall Program Execution Time: %f seconds\n", program_execution_time);
+
+
+  size_t data_transfer_size = sizeof(unsigned char) * size;
+  double bandwidth_to_kernel = (double)data_transfer_size / program_execution_time;
+  double bandwidth_from_kernel = (double)data_transfer_size / program_execution_time;
+
+  printf("Bandwidth to Kernel: %f bytes/s\n", bandwidth_to_kernel);
+  printf("Bandwidth from Kernel: %f bytes/s\n", bandwidth_from_kernel);
+
+  size_t total_work = image.width() * image.height() * image.spectrum();
+  double throughput = (double)total_work / kernel_execution_time;
+
+  printf("Throughput of the Kernel: %f units/s\n", throughput);
+
+
   // 11. Check correctness of execution
   // Display the image
   image_out.display("Image rotation");
@@ -243,6 +300,9 @@ int main(int argc, char** argv)
   clReleaseKernel(kernel);
   clReleaseCommandQueue(command_queue);
   clReleaseContext(context);
+
+  clReleaseEvent(start);
+  clReleaseEvent(end);
   
   return 0;
 }
