@@ -163,39 +163,38 @@ def get_2D_points(X_w, T_c_w, K_c):
 
     return points_c_unnormalized, points_c
 
-def plot_3D(X_computed, X_w, transforms, idx, title="Untitled"):
+def plot_3D(X_computed, transforms, idx, title="Untitled"):
 
-    ##Plot the 3D cameras and the 3D points
+    # Create a 3D plot
     fig3D = plt.figure(4)
+    ax = fig3D.add_subplot(111, projection='3d')
 
-    ax = plt.axes(projection='3d', adjustable='box')
+    # Adjust the axis scale based on the points
+    max_range = np.max(X_computed, axis=1) - np.min(X_computed, axis=1)
+    ax.set_xlim([np.min(X_computed[0, :]), np.max(X_computed[0, :])])
+    ax.set_ylim([np.min(X_computed[1, :]), np.max(X_computed[1, :])])
+    ax.set_zlim([np.min(X_computed[2, :]), np.max(X_computed[2, :])])
+
+    # Plot camera frames
+    for cam_idx, T_w_c in enumerate(transforms):
+        drawRefSystem(ax, T_w_c, '-', chr(ord('A') + cam_idx))  # Use letters A, B, C, ...
+
+    # Plot points for comparison
+    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label="estimated")
+
+    # Set labels and title
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
+    if idx != 0:
+        plt.title(f'Solution {idx}')
+    else:
+        plt.title(title)
 
-    for cam_idx,T_w_c in enumerate(transforms):
-    #drawRefSystem(ax, np.eye(4, 4), '-', 'W')
-        drawRefSystem(ax, T_w_c, '-', 'C'+str(cam_idx+1))
-
-    #Plot only provided GT
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
-    #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options) 
-    
-    #Plot points for comparison
-    if(not (X_computed == X_w).all()):
-        ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
-        #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
-
+    # Display legend
     ax.legend()
 
-    #Matplotlib does not correctly manage the axis('equal')
-    xFakeBoundingBox = np.linspace(0, 4, 2)
-    yFakeBoundingBox = np.linspace(0, 4, 2)
-    zFakeBoundingBox = np.linspace(0, 4, 2)
-    plt.plot(xFakeBoundingBox, yFakeBoundingBox, zFakeBoundingBox, 'w.')
-    if (idx != 0): plt.title(f'Solution {idx}')
-    else: plt.title(title)
-
+    # Show the plot
     print('Close the figure to continue. Left button for orbit, right button for zoom.')
     plt.show()
 
@@ -266,9 +265,8 @@ def resBundleProjectionFisheye(Op, xData, K_1, K_2, D_1, D_2, nPoints):
     (2 equations/residuals per 2D point)             
     """ 
     theta = Op[0:3]
-    azimuth = Op[3]
-    elevation = Op[4]
-    X_w_list = Op[5:]
+    t_wBwA = Op[3:6]
+    X_w_list = Op[6:]
 
     res = []
     X_triangulated_wA = np.array(X_w_list).reshape((3, nPoints))
@@ -276,16 +274,13 @@ def resBundleProjectionFisheye(Op, xData, K_1, K_2, D_1, D_2, nPoints):
 
     # calculating points in 2D from 3d to camera 2
     R_wBwA = scipy.linalg.expm(crossMatrix(theta))
-    t_wBwA = np.array([[np.sin(elevation)*np.cos(azimuth)], [np.sin(elevation)*np.sin(azimuth)], [np.cos(elevation)]]).reshape((3,1))
-    
-    t_wBwA = t_wBwA.flatten()
     T_wBwA = ensamble_T(R_wBwA, t_wBwA)
 
     X_triangulated_c2A = np.dot(np.linalg.inv(T_wc2), X_triangulated_wA)
-    X_triangulated_c1A = np.dot(T_leftright, X_triangulated_c2A)
+    X_triangulated_c1A = np.dot(np.linalg.inv(T_wc1), X_triangulated_wA)
     X_triangulated_wB = np.dot(T_wBwA, X_triangulated_wA)
     X_triangulated_c2B = np.dot(np.linalg.inv(T_wc2), X_triangulated_wB)
-    X_triangulated_c1B = np.dot(T_leftright, X_triangulated_c2B)
+    X_triangulated_c1B = np.dot(np.linalg.inv(T_wc1), X_triangulated_wB)
 
     x1Data_tri = np.zeros((3,npoints))
     x2Data_tri = np.zeros((3,npoints))
@@ -336,7 +331,7 @@ def resBundleProjectionFisheye(Op, xData, K_1, K_2, D_1, D_2, nPoints):
 
 if __name__ == '__main__':
 
-    T_leftright = np.loadtxt('T_leftright.txt')
+    T_leftright = np.loadtxt('T_leftRight.txt')
     T_wAwB_gt = np.loadtxt('T_wAwB_gt.txt')
     T_wAwB_seed = np.loadtxt('T_wAwB_seed.txt')
     T_wc1 = np.loadtxt('T_wc1.txt')
@@ -404,7 +399,7 @@ if __name__ == '__main__':
     
     ##3.2 Triangulation for pose A
     
-    print("Exercise 3.2")
+    print("Exercise 2.2")
     ##Use for loop to get all v for every u, v point, thren translate to world and unproject to check
 
     npoints = x1Data.shape[1]
@@ -495,7 +490,7 @@ if __name__ == '__main__':
     #Use forward model with triangulated points on B
     X_triangulated_wB = np.dot(T_wBwA_seed, X_triangulated_wA)
     X_triangulated_c2B = np.dot(np.linalg.inv(T_wc2), X_triangulated_wB)
-    X_triangulated_c1B = np.dot(T_leftright, X_triangulated_c2B)
+    X_triangulated_c1B = np.dot(np.linalg.inv(T_wc1), X_triangulated_wB)
 
     for i in range(npoints):
 
@@ -530,10 +525,8 @@ if __name__ == '__main__':
     t_wBwA_seed = T_wBwA_seed[0:3,3]
 
     theta = crossMatrixInv(scipy.linalg.logm(R_wBwA_seed)) 
-    elevation = np.arccos(t_wBwA_seed[2])
-    azimuth = np.arcsin(t_wBwA_seed[0] / np.sin(elevation))
 
-    Op = theta+[azimuth, elevation] + X_triangulated_wA[:3].flatten().tolist()
+    Op = theta+[t_wBwA_seed[0], t_wBwA_seed[1], t_wBwA_seed[2]] + X_triangulated_wA[:3].flatten().tolist()
 
     res = resBundleProjectionFisheye(Op, xData, K_1, K_2, D1_k_array, D2_k_array, npoints)
 
@@ -541,35 +534,27 @@ if __name__ == '__main__':
     
      ## SOLUTION OPTIMIZED
     theta_OPT = OpOptim.x[0:3]
-    azimuth_OPT = OpOptim.x[3]
-    elevation_OPT = OpOptim.x[4]
-    X_computed_OPT_list = OpOptim.x[5:]
+    t_wBwA = OpOptim.x[3:6]
+    X_computed_OPT_list = OpOptim.x[6:]
 
     X_computed_OPT = np.array(X_computed_OPT_list).reshape((3, npoints))
     X_computed_OPT = np.vstack((X_computed_OPT, np.ones((1, npoints)))) # homogeneous coords
 
     # calculating points in 2D from 3d to camera 2
     R_wBwA = scipy.linalg.expm(crossMatrix(theta_OPT))
-    t_wBwA = np.array([[np.sin(elevation_OPT)*np.cos(azimuth_OPT)], [np.sin(elevation_OPT)*np.sin(azimuth_OPT)], [np.cos(elevation_OPT)]]).reshape((3,1))
-    
-    t_wBwA = t_wBwA.flatten()
-    t_wAwB_gt = T_wAwB_gt[:3, 3]
-    scale_factor = np.linalg.norm(t_wAwB_gt)
-    X_computed_OPT_scaled = X_computed_OPT * scale_factor
-    t_wBwA_scaled = t_wBwA * scale_factor
 
-    T_wBwA = ensamble_T(R_wBwA, t_wBwA_scaled)
+    T_wBwA = ensamble_T(R_wBwA, t_wBwA)
     print("Optimized and scaled T_wBwA:")
     print(T_wBwA)
 
     #Use forward model to project optimized points
     #Use forward model with triangulated points on B
-    X_triangulated_wA = X_computed_OPT_scaled
+    X_triangulated_wA = X_computed_OPT
     X_triangulated_wB = np.dot(T_wBwA, X_triangulated_wA)
     X_triangulated_c2B = np.dot(np.linalg.inv(T_wc2), X_triangulated_wB)
-    X_triangulated_c1B = np.dot(T_leftright, X_triangulated_c2B)
+    X_triangulated_c1B = np.dot(np.linalg.inv(T_wc1), X_triangulated_wB)
     X_triangulated_c2A = np.dot(np.linalg.inv(T_wc2), X_triangulated_wA)
-    X_triangulated_c1A = np.dot(T_leftright, X_triangulated_c2A)
+    X_triangulated_c1A = np.dot(np.linalg.inv(T_wc1), X_triangulated_wA)
 
 
     x1Data_tri = np.zeros((3,npoints))
@@ -619,3 +604,12 @@ if __name__ == '__main__':
     visualize_2D_points(fisheye2_frameA, x2Data, points_c2)
     visualize_2D_points(fisheye1_frameB, x3Data, points_c3)
     visualize_2D_points(fisheye2_frameB, x4Data, points_c4)
+
+
+    t_wBwA = T_wBwA[:3, 3]
+    scale_factor = np.linalg.norm(t_wBwA)
+    X_computed_OPT_scaled = X_computed_OPT * scale_factor
+    t_wBwA_scaled = t_wBwA * scale_factor
+    T_wBwA_scaled = ensamble_T(R_wBwA, t_wBwA_scaled)
+
+    # plot_3D(X_computed_OPT_scaled, [T_wc1, np.linalg.inv(T_wBwA_scaled)],0, "Scaled 3D cameras A and B")
