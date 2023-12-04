@@ -220,10 +220,10 @@ int main(int argc, char** argv)
 
   // 9. Launch Kernel
   
-  const size_t global_size[2] = {image.width() , image.height()};
+  const size_t global_size[3] = {image.width() , image.height(), image.spectrum()};
   // printf("Local size: %d\n", local_size);
   // printf("Global size: %d\n", global_size);
-  err = clEnqueueNDRangeKernel(command_queue, kernel, 2, NULL, global_size, NULL, 0, NULL, NULL);
+  err = clEnqueueNDRangeKernel(command_queue, kernel, 3, NULL, global_size, NULL, 0, NULL, NULL);
   cl_error(err, "Failed to launch kernel to the device\n");
 
 
