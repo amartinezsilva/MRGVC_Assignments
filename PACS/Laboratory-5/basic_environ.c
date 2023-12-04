@@ -181,6 +181,11 @@ int main(int argc, char** argv)
   CImg<unsigned char> image("image.jpg");  // Load image file "image.jpg" at object img
   // image size
   printf("Image size: %d\n", image.size());
+  int width = image.width();
+  int height = image.height();
+  printf("Image width: %d\n", width);
+  printf("Image heigth: %d\n", height);
+
   size_t size = image.size();
   // unsigned char input_array[size] = image.data();
   // unsigned char output_array[size];
@@ -202,10 +207,8 @@ int main(int argc, char** argv)
   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &in_device_object);
   cl_error(err, "Failed to set argument 0\n");
   err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &out_device_object);
-  int width = image.width();
   err = clSetKernelArg(kernel, 2, sizeof(width), &width);
   cl_error(err, "Failed to set argument 1\n");
-  int height = image.height();
   err = clSetKernelArg(kernel, 3, sizeof(height), &height);
   cl_error(err, "Failed to set argument 2\n");
   float angle = 1.570796;
