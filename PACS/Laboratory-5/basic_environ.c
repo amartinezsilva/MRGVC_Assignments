@@ -183,8 +183,11 @@ int main(int argc, char** argv)
   printf("Image size: %d\n", image.size());
   int width = image.width();
   int height = image.height();
+  int spectrum = image.spectrum();
+
   printf("Image width: %d\n", width);
   printf("Image heigth: %d\n", height);
+  printf("Image spectrum: %d\n", spectrum);
 
   size_t size = image.size();
   // unsigned char input_array[size] = image.data();
