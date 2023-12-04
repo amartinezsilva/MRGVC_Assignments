@@ -72,7 +72,7 @@ int main(int argc, char** argv)
 	
   // 2. Scan for devices in each platform
   for (int i = 0; i < n_platforms; i++ ){
-    err = clGetDeviceIDs( platforms_ids[i], CL_DEVICE_TYPE_GPU , num_devices_ids, devices_ids[i], &(n_devices[i]));
+    err = clGetDeviceIDs( platforms_ids[i], CL_DEVICE_TYPE_ALL , num_devices_ids, devices_ids[i], &(n_devices[i]));
     cl_error(err, "Error: Failed to Scan for Devices IDs");
     printf("\t[%d]-Platform. Number of available devices: %d\n", i, n_devices[i]);
 
