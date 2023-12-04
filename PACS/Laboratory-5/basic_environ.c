@@ -41,7 +41,7 @@ int main(int argc, char** argv)
   char str_buffer[t_buf];		// auxiliary buffer	
   size_t e_buf;				// effective size of str_buffer in use
 	    
-  size_t global_size;                      	// global domain size for our calculation
+  //size_t global_size;                      	// global domain size for our calculation
   size_t local_size;                       	// local domain size for our calculation
 
   const cl_uint num_platforms_ids = 10;				// max of allocatable platforms
@@ -178,56 +178,57 @@ int main(int argc, char** argv)
   cl_error(err, "Failed to create kernel from the program\n");
 
   // 5. Create and initialize input and output arrays at host memory
-  CImg<unsigned char> input_array("image.jpg");  // Load image file "image.jpg" at object img
-  size_t size = input_array.width()*input_array.height()*input_array.depth();
-  unsigned char output_array[size];
+  CImg<unsigned char> image("image.jpg");  // Load image file "image.jpg" at object img
+  // image size
+  printf("Image size: %d\n", image.size());
+  size_t size = image.size();
+  // unsigned char input_array[size] = image.data();
+  // unsigned char output_array[size];
   
 
   // 6. Create OpenCL buffer visible to the OpenCl runtime
-  cl_mem in_device_object  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(input_array), NULL, &err);
+  cl_mem in_device_object  = clCreateBuffer(context, CL_MEM_READ_ONLY, sizeof(unsigned char)*size, NULL, &err);
   cl_error(err, "Failed to create memory buffer at device\n");
-  cl_mem out_device_object = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(output_array), NULL, &err);
+  cl_mem out_device_object = clCreateBuffer(context, CL_MEM_WRITE_ONLY, sizeof(unsigned char)*size, NULL, &err);
   cl_error(err, "Failed to create memory buffer at device\n");
 
 
   // 7. Write data into the memory object
-  err = clEnqueueWriteBuffer(command_queue, in_device_object, CL_TRUE, 0, sizeof(input_array),
-                             &input_array, 0, NULL, NULL);
+  err = clEnqueueWriteBuffer(command_queue, in_device_object, CL_TRUE, 0, sizeof(unsigned char)*size,
+                             image.data(), 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a write command\n");
 
   // 8. Set the arguments to the kernel
-  int count = 8;
   err = clSetKernelArg(kernel, 0, sizeof(cl_mem), &in_device_object);
   cl_error(err, "Failed to set argument 0\n");
   err = clSetKernelArg(kernel, 1, sizeof(cl_mem), &out_device_object);
+  int width = image.width();
+  err = clSetKernelArg(kernel, 2, sizeof(width), &width);
   cl_error(err, "Failed to set argument 1\n");
-  err = clSetKernelArg(kernel, 2, sizeof(count), &count);
+  int height = image.height();
+  err = clSetKernelArg(kernel, 3, sizeof(height), &height);
   cl_error(err, "Failed to set argument 2\n");
-
+  float angle = 1.570796;
+  err = clSetKernelArg(kernel, 4, sizeof(angle), &angle);
+  cl_error(err, "Failed to set argument 3\n");
 
   // 9. Launch Kernel
-  local_size = 128; //Number of workitems in a workgroup
-  global_size = 1024; //Total number of workitems
-  err = clEnqueueNDRangeKernel(command_queue, kernel, 1, NULL, &global_size, &local_size, 0, NULL, NULL);
+  
+  const size_t global_size[2] = {image.width() , image.height()};
+  // printf("Local size: %d\n", local_size);
+  // printf("Global size: %d\n", global_size);
+  err = clEnqueueNDRangeKernel(command_queue, kernel, 2, NULL, global_size, NULL, 0, NULL, NULL);
   cl_error(err, "Failed to launch kernel to the device\n");
 
 
   // 10. Read data form device memory back to host memory
-  err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0,sizeof(output_array), &output_array, 0, NULL, NULL);
+  CImg<unsigned char> image_out(image.width(), image.height(), 1, 4, 0);
+  err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0,sizeof(unsigned char)*size, image_out.data(), 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a read command\n");
   
   // 11. Check correctness of execution
-  printf("input within count\n");
-  printf("%f",input_array[count-1]);
-  printf("\n");
-  printf("output within count\n");
-  printf("%f", output_array[count-1]);
-
-  printf("input outside count\n");
-  printf("%f",input_array[count+1]);
-  printf("\n");
-  printf("output outside count\n");
-  printf("%f", output_array[count+1]);
+  // Display the image
+  image_out.display("Image rotation");
   
   // 12. Release OpenCL memory allocated along program
   clReleaseMemObject(in_device_object);
