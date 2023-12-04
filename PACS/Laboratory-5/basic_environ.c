@@ -7,6 +7,7 @@
 ////////////////////////////////////////////////////////////////////
 
 #define cimg_use_jpeg
+#include "CImg/CImg.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,12 +16,13 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include "CImg/CImg.h"
 #ifdef __APPLE__
   #include <OpenCL/opencl.h>
 #else
   #include <CL/cl.h>
 #endif
+
+using namespace cimg_library;
   
 // check error, in such a case, it exits
 
@@ -178,7 +180,7 @@ int main(int argc, char** argv)
   // 5. Create and initialize input and output arrays at host memory
   CImg<unsigned char> input_array("image.jpg");  // Load image file "image.jpg" at object img
   size_t size = input_array.width()*input_array.height()*input_array.depth();
-  uchar output_array[size];
+  unsigned char output_array[size];
   
 
   // 6. Create OpenCL buffer visible to the OpenCl runtime
@@ -213,8 +215,6 @@ int main(int argc, char** argv)
   // 10. Read data form device memory back to host memory
   err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0,sizeof(output_array), &output_array, 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a read command\n");
-
-  CImg<unsigned char> input_array("image.jpg");  // Load image file "image.jpg" at object img
   
   // 11. Check correctness of execution
   printf("input within count\n");
