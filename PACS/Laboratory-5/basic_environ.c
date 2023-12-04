@@ -225,7 +225,7 @@ int main(int argc, char** argv)
 
 
   // 10. Read data form device memory back to host memory
-  CImg<unsigned char> image_out(image.width(), image.height(), 1, 4, 0);
+  CImg<unsigned char> image_out(image.width(), image.height(), 1, 3);
   err = clEnqueueReadBuffer(command_queue, out_device_object, CL_TRUE, 0,sizeof(unsigned char)*size, image_out.data(), 0, NULL, NULL);
   cl_error(err, "Failed to enqueue a read command\n");
   
