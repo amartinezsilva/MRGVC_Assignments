@@ -6,7 +6,7 @@
 // 
 ////////////////////////////////////////////////////////////////////
 #define cimg_use_jpeg
-#include "CIMg/CImg.h"
+#include "CImg/CImg.h"
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
