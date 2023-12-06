@@ -310,7 +310,7 @@ int main(int argc, char** argv)
   clReleaseEvent(kernel_read_bandwidth);
 
   timer = clock() - timer;
-  printf("Execution time of the program in miliseconds: %f s\n", ((float)timer)/CLOCKS_PER_SEC);
+  printf("Execution time of the program in seconds: %f s\n", ((float)timer)/CLOCKS_PER_SEC);
   
   return 0;
 }
