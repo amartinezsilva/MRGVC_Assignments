@@ -47,8 +47,6 @@ int main(int argc, char** argv)
   cl_event kernel_time;
   cl_event kernel_write_bandwidth;
   cl_event kernel_read_bandwidth;
-  // cl_event start, end;
-
 
   int err;                            	// error code returned from api calls
   size_t t_buf = 50;			// size of str_buffer
@@ -72,10 +70,6 @@ int main(int argc, char** argv)
   cl_context context;                 				// compute context
   cl_command_queue command_queue;     				// compute command queue
 
-  // Before the program execution
-  //clEnqueueMarker(command_queue, &start);
-    
-
   // 1. Scan the available platforms:
   err = clGetPlatformIDs (num_platforms_ids, platforms_ids, &n_platforms);
   cl_error(err, "Error: Failed to Scan for Platforms IDs");
@@ -88,7 +82,6 @@ int main(int argc, char** argv)
     printf( "\t[%d]-Platform Name: %s\n", i, str_buffer);
   }
   printf("\n");
-  // ***Task***: print on the screen the name, host_timer_resolution, vendor, versionm, ...
 	
   // 2. Scan for devices in each platform
   for (int i = 0; i < n_platforms; i++ ){
@@ -105,6 +98,8 @@ int main(int argc, char** argv)
       err = clGetDeviceInfo(devices_ids[i][j], CL_DEVICE_MAX_COMPUTE_UNITS, sizeof(max_compute_units_available), &max_compute_units_available, NULL);
       cl_error(err, "clGetDeviceInfo: Getting device max compute units available");
       printf("\t\t [%d]-Platform [%d]-Device CL_DEVICE_MAX_COMPUTE_UNITS: %d\n\n", i, j, max_compute_units_available);
+
+      // ***Task***: print on the screen the cache size, global mem size, local memsize, max work group size, profiling timer resolution and ... of each device
 
       // cache size
       cl_ulong cache_size;
@@ -142,8 +137,6 @@ int main(int argc, char** argv)
       printf("\t\t [%d]-Platform [%d]-Device CL_DEVICE_PROFILING_TIMER_RESOLUTION: %d\n", i, 0, profiling_timer_resolution);
     }
   }	
-  // ***Task***: print on the screen the cache size, global mem size, local memsize, max work group size, profiling timer resolution and ... of each device
-
 
 
   // 3. Create a context, with a device
@@ -155,10 +148,6 @@ int main(int argc, char** argv)
   cl_command_queue_properties proprt[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
   command_queue = clCreateCommandQueueWithProperties( context, devices_ids[0][0], proprt, &err);
   cl_error(err, "Failed to create a command queue\n");
-
-
-
-  // --------------------------------Kernel 0 -------------------------------------//
 
   // 2. Load source code of kernel
 
@@ -256,14 +245,11 @@ int main(int argc, char** argv)
   cl_error(err, "Failed to set argument 1\n");
   err = clSetKernelArg(kernel, 3, sizeof(int), &height);
   cl_error(err, "Failed to set argument 2\n");
-  float angle = 1.570796;
+  float angle = 1.570796; //rotate 90 degrees
   err = clSetKernelArg(kernel, 4, sizeof(float), &angle);
   cl_error(err, "Failed to set argument 3\n");
 
   // 9. Launch Kernel
-  
-  // Before the kernel execution
-  // clEnqueueMarker(command_queue, &start);
 
   const size_t global_size[3] = {image.width() , image.height(), image.spectrum()};
   // printf("Local size: %d\n", local_size);
@@ -273,8 +259,6 @@ int main(int argc, char** argv)
 
   // After the kernel execution
   clWaitForEvents(1, &kernel_time);
-  // clEnqueueMarker(command_queue, &end);
-  // clEnqueueWaitForEvents(command_queue, 1, &end);
 
   cl_ulong kernel_time_start, kernel_time_end;
   clGetEventProfilingInfo(kernel_time, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &kernel_time_start, NULL);
@@ -298,18 +282,6 @@ int main(int argc, char** argv)
 
   double kernel_read_bandwidth_time = (double)(kernel_read_bandwidth_time_end - kernel_read_bandwidth_time_start); 
   printf("OpenCl read buffer time is: %0.3f milliseconds \n",kernel_read_bandwidth_time / 1000000.0); // converted to miliseconds
-  
-
-  // After the program execution
-  // clEnqueueMarker(command_queue, &end);
-  // clEnqueueWaitForEvents(command_queue, 1, &end);
-
-  // cl_ulong program_time_start, program_time_end;
-  // clGetEventProfilingInfo(start, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &program_time_start, NULL);
-  // clGetEventProfilingInfo(end, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &program_time_end, NULL);
-
-  // double program_execution_time = (double)(program_time_end - program_time_start) * 1.0e-9; // convert to seconds
-  // printf("Overall Program Execution Time: %f seconds\n", program_execution_time);
 
 
   size_t data_transfer_size = sizeof(unsigned char) * size;
