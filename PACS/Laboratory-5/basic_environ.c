@@ -201,9 +201,6 @@ int main(int argc, char** argv)
   printf("Image spectrum: %d\n", spectrum);
 
   size_t size = image.size();
-  // unsigned char input_array[size] = image.data();
-  // unsigned char output_array[size];
-  
 
   // 6. Create OpenCL buffer visible to the OpenCl runtime
   cl_ulong total_memory_allocated = 0;
@@ -252,8 +249,7 @@ int main(int argc, char** argv)
   // 9. Launch Kernel
 
   const size_t global_size[3] = {image.width() , image.height(), image.spectrum()};
-  // printf("Local size: %d\n", local_size);
-  // printf("Global size: %d\n", global_size);
+
   err = clEnqueueNDRangeKernel(command_queue, kernel, 3, NULL, global_size, NULL, 0, NULL, &kernel_time);
   cl_error(err, "Failed to launch kernel to the device\n");
 
@@ -309,8 +305,6 @@ int main(int argc, char** argv)
   clReleaseCommandQueue(command_queue);
   clReleaseContext(context);
 
-  // clReleaseEvent(start);
-  // clReleaseEvent(end);
   clReleaseEvent(kernel_time);
   clReleaseEvent(kernel_write_bandwidth);
   clReleaseEvent(kernel_read_bandwidth);
