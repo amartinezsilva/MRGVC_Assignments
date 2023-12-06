@@ -249,8 +249,8 @@ class drone_race {
             Eigen::Matrix<double, 3, 3> orientation = quat_to_R_matrix(gates[i].orientation);
             Eigen::Matrix<double, 3, 1> pos_gate(gates[i].position.x, gates[i].position.y, gates[i].position.z);
 
-            const double distance_const = 1.0;
-            const double velocity_const = 0.25;
+            const double distance_const = 0.45;
+            const double velocity_const = 0.35;
             const double acceleration_const = 0.0;
             const double jerk_const = 0.0;
 
@@ -365,7 +365,8 @@ class drone_race {
                 velocity_pub_.publish(trayectory_velocities[i-1]);
 
                 index = i;
-                if(index == trayectory_positions.size()){
+
+                if(index+1 == trayectory_positions.size()){
                     ROS_INFO_STREAM_ONCE("Final goal reached!");
                     return;
                 }
