@@ -284,13 +284,13 @@ int main(int argc, char** argv)
   double bandwidth_to_kernel = (double)data_transfer_size / (kernel_write_bandwidth_time * 1.0e-3);
   double bandwidth_from_kernel = (double)data_transfer_size / (kernel_read_bandwidth_time * 1.0e-3);
 
-  printf("Bandwidth to Kernel: %f bytes/s\n", bandwidth_to_kernel);
-  printf("Bandwidth from Kernel: %f bytes/s\n", bandwidth_from_kernel);
+  printf("Bandwidth to Kernel: %f bytes/ms\n", bandwidth_to_kernel);
+  printf("Bandwidth from Kernel: %f bytes/ms\n", bandwidth_from_kernel);
 
   size_t total_work = image.width() * image.height() * image.spectrum();
   double throughput = (double)total_work / (kernel_execution_time * 1.0e-3);
 
-  printf("Throughput of the Kernel: %f pixels/s\n", throughput);
+  printf("Throughput of the Kernel: %f pixels/ms\n", throughput);
 
 
   // 11. Check correctness of execution
