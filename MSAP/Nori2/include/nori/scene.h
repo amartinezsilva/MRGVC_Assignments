@@ -67,6 +67,9 @@ public:
 	/// Return a the scene background
 	Color3f getBackground(const Ray3f& ray) const;
 
+    //Return a reference to an array containing all media
+    const std::vector<Medium *> &getMedia() const { return m_media; }
+
 	/// Sample emitter
 	const Emitter *sampleEmitter(float rnd, float &pdf) const;
 
@@ -139,6 +142,7 @@ public:
 private:
     std::vector<Mesh *> m_meshes;
 	std::vector<Emitter *> m_emitters;
+    std::vector<Medium *> m_media;
 	Emitter *m_enviromentalEmitter = nullptr;
 	
     Integrator *m_integrator = nullptr;

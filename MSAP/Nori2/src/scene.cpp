@@ -25,6 +25,7 @@
 #include <nori/sampler.h>
 #include <nori/camera.h>
 #include <nori/emitter.h>
+#include <nori/medium.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -117,6 +118,10 @@ void Scene::addChild(NoriObject *obj, const std::string& name) {
             if (m_integrator)
                 throw NoriException("There can only be one integrator per scene!");
             m_integrator = static_cast<Integrator *>(obj);
+            break;
+
+        case EMedium:
+            m_media.push_back(static_cast<Medium*>(obj));
             break;
 
         default:

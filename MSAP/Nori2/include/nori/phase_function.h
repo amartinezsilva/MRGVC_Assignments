@@ -9,6 +9,8 @@ NORI_NAMESPACE_BEGIN
 class PhaseFunction : public NoriObject {
 
     public:
+        PhaseFunction();
+        //PhaseFunction(const PropertyList &props);
         virtual float p(const Vector3f &wo, const Vector3f &wi) const = 0;
         virtual float sample_p(const Vector3f &wo, Vector3f *wi,
                                 const Point2f &u) const = 0;
@@ -25,6 +27,7 @@ class HenyeyGreenstein : public PhaseFunction {
     public:
 
         HenyeyGreenstein(float g) : m_g(g) { }
+        //HenyeyGreenstein(const PropertyList &props);
         float p(const Vector3f &wo, const Vector3f &wi) const;
         float sample_p(const Vector3f &wo, Vector3f *wi, const Point2f &sample) const;
 
