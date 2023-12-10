@@ -1,5 +1,6 @@
 #include <ros/ros.h>
 #include <geometry_msgs/Twist.h>
+#include <geometry_msgs/TwistStamped.h>
 #include <nav_msgs/Odometry.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.h>
@@ -20,13 +21,15 @@
 #include <mav_trajectory_generation/polynomial_optimization_linear.h>
 #include <mav_trajectory_generation/trajectory_sampling.h>
 
+#include <ros/package.h>
+
 using namespace std;
 
 class drone_race {
 
-    std::vector<geometry_msgs::PoseStamped> trayectory_positions;
-    std::vector<geometry_msgs::Twist> trayectory_velocities;
-    std::vector<double> trayectory_times;
+    std::vector<geometry_msgs::PoseStamped> trajectory_positions;
+    std::vector<geometry_msgs::TwistStamped> trajectory_velocities;
+    std::vector<double> trajectory_times;
     int index = 1;
 
     std::vector<geometry_msgs::Pose> gates;
@@ -41,7 +44,7 @@ class drone_race {
     ros::Publisher pub_gate_markers_;
 
     //ros::Subscriber position_sub_;
-    ros::Publisher velocity_pub_;
+    ros::Publisher velocity_pub_, pose_pub_;
 
     //Id markers
     int id_marker = 0;
@@ -59,7 +62,10 @@ class drone_race {
             nh_.advertise<visualization_msgs::MarkerArray>("gate_markers", 0);
         
         //position_sub_ = nh_.subscribe("/ground_truth_to_tf/pose", 1, &FollowTargetsClass::positionCb, this);
-		velocity_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
+		velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("/command/twist", 1);
+        pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/command/pose", 1);
+        trajectory_index_ = 0;
+
     }
 
     ~drone_race() {
@@ -310,25 +316,26 @@ class drone_race {
         for (int i = 0; i < states.size(); ++i) {
             // Convert position
             geometry_msgs::PoseStamped pose;
+            pose.header.frame_id = "/map";
             pose.pose.position.x = states[i].position_W[0];
             pose.pose.position.y = states[i].position_W[1];
             pose.pose.position.z = states[i].position_W[2];
-            trayectory_positions.push_back(pose);
+            trajectory_positions.push_back(pose);
 
             // Convert velocity
-            geometry_msgs::Twist twist;
-            twist.linear.x = states[i].velocity_W[0];
-            twist.linear.y = states[i].velocity_W[1];
-            twist.linear.z = states[i].velocity_W[2];
-            trayectory_velocities.push_back(twist);
+            geometry_msgs::TwistStamped twist;
+            twist.header.frame_id = "/base_link";
+            twist.twist.linear.x = states[i].velocity_W[0];
+            twist.twist.linear.y = states[i].velocity_W[1];
+            twist.twist.linear.z = states[i].velocity_W[2];
+            trajectory_velocities.push_back(twist);
             
             double time_in_seconds = static_cast<double>(states[i].time_from_start_ns) / 1e9;  // Convert nanoseconds to seconds
-            trayectory_times.push_back(time_in_seconds);
+            trajectory_times.push_back(time_in_seconds);
         }
     }
 
     void send_command(ros::Time start_time) {
-        // IF HE USE DRONE POSITION
 
         // float ex = msg.pose.position.x - trayectory_positions[index].pose.position.x;
 		// float ey = msg.pose.position.y - trayectory_positions[index].pose.position.y;
@@ -348,30 +355,25 @@ class drone_race {
 
         // }
 
-
-        // IF HE USE TIME
         
         ros::Time ros_time = ros::Time::now();
 
         double time = ros_time.toSec() - start_time.toSec();
-        // cout << "Time " << time << endl;
 
-        for ( int i = index; i < trayectory_times.size(); i++) {
-            double trayectory_time_prev_sec = trayectory_times[i - 1];
-            double trayectory_time_sec = trayectory_times[i];
+        if (time > trajectory_times[trajectory_index_]) {
 
-            if (trayectory_time_prev_sec <= time && time < trayectory_time_sec) {
-                
-                velocity_pub_.publish(trayectory_velocities[i-1]);
+            trajectory_index_++;
 
-                index = i;
-
-                if(index+1 == trayectory_positions.size()){
-                    ROS_INFO_STREAM_ONCE("Final goal reached!");
-                    return;
-                }
+            if(trajectory_index_ == trajectory_positions.size()){
+                ROS_INFO_STREAM_ONCE("Final goal reached!");
+                return;
             }
+
         }
+
+        velocity_pub_.publish(trajectory_velocities[trajectory_index_]);
+
+
     }
 
     private: 
@@ -587,10 +589,12 @@ int main(int argc, char** argv) {
 	ros::init(argc, argv, "move_drone");
 	ros::NodeHandle nh("~");
 
+    std::string pkg_path = ros::package::getPath("arob_lab6");
+
     // Load the gates
     drone_race race;
     string filegates;
-    filegates.assign("/home/luis/catkin_ws/src/arob_lab6/src/");
+    filegates.assign(pkg_path + "/src/");
     if (argc>1){
         filegates.append(argv[argc-1]);
     }
