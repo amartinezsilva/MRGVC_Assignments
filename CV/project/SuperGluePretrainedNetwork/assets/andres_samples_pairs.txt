@@ -1,0 +1,3 @@
+antigua.jpg img_1.jpg
+antigua.jpg img_parallax1.jpg
+img_1.jpg img_parallax1.jpg

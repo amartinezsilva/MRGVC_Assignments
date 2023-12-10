@@ -1,0 +1,7 @@
+antigua.jpg img_1.jpg
+antigua.jpg img_parallax_1_1.jpg
+antigua.jpg img_parallax_2_2.jpg
+antigua.jpg img_parallax_3_1.jpg
+img_1.jpg img_parallax_1_1.jpg
+img_1.jpg img_parallax_2_2.jpg
+img_1.jpg img_parallax_3_1.jpg
