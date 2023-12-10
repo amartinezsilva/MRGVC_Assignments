@@ -51,6 +51,9 @@ class drone_race {
 
     public:
 
+        int trajectory_index_ = 0;
+        ros::Time start_time_;
+
     drone_race() {
 
         // create publisher for RVIZ markers
@@ -64,7 +67,6 @@ class drone_race {
         //position_sub_ = nh_.subscribe("/ground_truth_to_tf/pose", 1, &FollowTargetsClass::positionCb, this);
 		velocity_pub_ = nh_.advertise<geometry_msgs::TwistStamped>("/command/twist", 1);
         pose_pub_ = nh_.advertise<geometry_msgs::PoseStamped>("/command/pose", 1);
-        trajectory_index_ = 0;
 
     }
 
@@ -335,30 +337,11 @@ class drone_race {
         }
     }
 
-    void send_command(ros::Time start_time) {
-
-        // float ex = msg.pose.position.x - trayectory_positions[index].pose.position.x;
-		// float ey = msg.pose.position.y - trayectory_positions[index].pose.position.y;
-		// float ez = msg.pose.position.z - trayectory_positions[index].pose.position.z;
-
-		// distance_to_target = sqrt(ex*ex+ey*ey+ez*ez);
-
-        // if (distance_to_target < 0.1) {
-            
-        //     index ++;
-        //     if(index == trayectory_positions.size()){
-        //         ROS_INFO_STREAM_ONCE("Final goal reached!");
-		// 		return;
-        //     }
-
-        //     velocity_pub_.publish(trayectory_velocities[i]);
-
-        // }
-
+    void send_command() {
         
         ros::Time ros_time = ros::Time::now();
 
-        double time = ros_time.toSec() - start_time.toSec();
+        double time = ros_time.toSec() - start_time_.toSec();
 
         if (time > trajectory_times[trajectory_index_]) {
 
@@ -614,10 +597,10 @@ int main(int argc, char** argv) {
     race.generate_trajectory();
 
 
-    ros::Time start_time = ros::Time::now();
+    race.start_time_ = ros::Time::now();
     while (ros::ok())
     {
-        race.send_command(start_time);
+        race.send_command();
         ros::spinOnce();
         loop_rate.sleep();
     }
