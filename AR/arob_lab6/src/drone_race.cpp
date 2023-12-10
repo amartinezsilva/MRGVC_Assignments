@@ -53,6 +53,7 @@ class drone_race {
 
         int trajectory_index_ = 0;
         ros::Time start_time_;
+        bool finished_ = false;
 
     drone_race() {
 
@@ -349,6 +350,7 @@ class drone_race {
 
             if(trajectory_index_ == trajectory_positions.size()){
                 ROS_INFO_STREAM_ONCE("Final goal reached!");
+                finished_ = true;
                 return;
             }
 
@@ -600,7 +602,7 @@ int main(int argc, char** argv) {
     race.start_time_ = ros::Time::now();
     while (ros::ok())
     {
-        race.send_command();
+        if(!race.finished_) race.send_command();
         ros::spinOnce();
         loop_rate.sleep();
     }
