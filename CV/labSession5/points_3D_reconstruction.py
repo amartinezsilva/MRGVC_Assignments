@@ -169,18 +169,16 @@ def plot_3D(X_computed, transforms, idx, title="Untitled"):
     fig3D = plt.figure(4)
     ax = fig3D.add_subplot(111, projection='3d')
 
-    # Adjust the axis scale based on the points
-    max_range = np.max(X_computed, axis=1) - np.min(X_computed, axis=1)
-    ax.set_xlim([np.min(X_computed[0, :]), np.max(X_computed[0, :])])
-    ax.set_ylim([np.min(X_computed[1, :]), np.max(X_computed[1, :])])
-    ax.set_zlim([np.min(X_computed[2, :]), np.max(X_computed[2, :])])
+    ax.set_xlim([-1.0, 1.0])
+    ax.set_ylim([-1.0, 1.0])
+    ax.set_zlim([-1.0, 1.0])
 
     # Plot camera frames
     for cam_idx, T_w_c in enumerate(transforms):
         drawRefSystem(ax, T_w_c, '-', chr(ord('A') + cam_idx))  # Use letters A, B, C, ...
 
     # Plot points for comparison
-    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label="estimated")
+    ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label="triangulated")
 
     # Set labels and title
     ax.set_xlabel('X')
@@ -544,7 +542,7 @@ if __name__ == '__main__':
     R_wBwA = scipy.linalg.expm(crossMatrix(theta_OPT))
 
     T_wBwA = ensamble_T(R_wBwA, t_wBwA)
-    print("Optimized and scaled T_wBwA:")
+    print("Optimized T_wBwA:")
     print(T_wBwA)
 
     #Use forward model to project optimized points
@@ -605,11 +603,5 @@ if __name__ == '__main__':
     visualize_2D_points(fisheye1_frameB, x3Data, points_c3)
     visualize_2D_points(fisheye2_frameB, x4Data, points_c4)
 
-
-    t_wBwA = T_wBwA[:3, 3]
-    scale_factor = np.linalg.norm(t_wBwA)
-    X_computed_OPT_scaled = X_computed_OPT * scale_factor
-    t_wBwA_scaled = t_wBwA * scale_factor
-    T_wBwA_scaled = ensamble_T(R_wBwA, t_wBwA_scaled)
-
-    # plot_3D(X_computed_OPT_scaled, [T_wc1, np.linalg.inv(T_wBwA_scaled)],0, "Scaled 3D cameras A and B")
+    #plot_3D(X_computed_OPT, [T_wc1, np.linalg.inv(T_wBwA)],0, "Scaled 3D cameras A and B")
+    plot_3D(X_computed_OPT, [T_wc1, T_wc2, np.dot(np.linalg.inv(T_wBwA), T_wc1), np.dot(np.linalg.inv(T_wBwA), T_wc2)],0, "Scaled 3D cameras A and B")
