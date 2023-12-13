@@ -17,6 +17,8 @@
 import numpy as np
 import cv2 as cv
 
+from CV.labSession6.interpolationFunctions import numerical_gradient
+
 
 def read_image(filename: str, ):
     """
@@ -34,17 +36,24 @@ def normalized_cross_correlation(patch: np.array, search_area: np.array) -> np.a
     """
     # Complete the function
     i0 = patch
-    # ....
-    result = np.zeros(search_area.shape, dtype=np.float)
+    i0_mean = np.mean(i0)
+    i1_mean = np.mean(search_area)
+    i0_std = np.std(i0)
+    i1_std = np.std(search_area)
+
+    result = np.zeros(search_area.shape, dtype=float)
     margin_y = int(patch.shape[0]/2)
     margin_x = int(patch.shape[1]/2)
 
     for i in range(margin_y, search_area.shape[0] - margin_y):
         for j in range(margin_x, search_area.shape[1] - margin_x):
             i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
+
             # Implement the correlation
-            # ...
-            # result[i, j] = ...
+            i1_norm = (i1 - i1_mean) / i1_std
+            i0_norm = (i0 - i0_mean) / i0_std
+            result[i, j] = np.sum(i0_norm * i1_norm) / (i0.shape[0] * i0.shape[1])
+
     return result
 
 
@@ -60,6 +69,50 @@ def seed_estimation_NCC_single_point(img1_gray, img2_gray, i_img, j_img, patch_h
 
     search_area = img2_gray[i_ini_sa:i_end_sa, j_ini_sa:j_end_sa]
     result = normalized_cross_correlation(patch, search_area)
+
+    iMax, jMax = np.where(result == np.amax(result))
+
+    i_flow = i_ini_sa + iMax[0] - i_img
+    j_flow = j_ini_sa + jMax[0] - j_img
+
+    return i_flow, j_flow
+
+
+def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
+    """
+    Estimate normalized cross correlation values for a patch in a searching area.
+    """
+    patch_size = patch.size()
+    # Compute the Jacobian matrix
+    J0 = np.zeros((2, patch_size**2), dtype=np.float32)
+    margin = int(patch_size/2)
+
+    margin_y = int(patch.shape[0]/2)
+    margin_x = int(patch.shape[1]/2)
+    x = int(search_area.shape[0]/2)
+    y = int(search_area.shape[1]/2)
+
+    for i in range(margin_y, search_area.shape[0] - margin_y):
+        for j in range(margin_x, search_area.shape[1] - margin_x):
+            px = numerical_gradient(search_area, np.array([[x-margin_x+j, y+i]]))[0]
+            py = numerical_gradient(search_area, np.array([[x+j, y-margin_y+i]]))[0]
+            J0[0, i*patch_size+j] = px[0]
+            J0[1, i*patch_size+j] = py[1]
+
+        return result
+
+def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, patch_half_size: int = 5, searching_area_size: int = 100):
+
+    # Attention!! we are not checking the padding
+    patch = img1_gray[i_img - patch_half_size:i_img + patch_half_size + 1, j_img - patch_half_size:j_img + patch_half_size + 1]
+
+    i_ini_sa = i_img - int(searching_area_size / 2)
+    i_end_sa = i_img + int(searching_area_size / 2) + 1
+    j_ini_sa = j_img - int(searching_area_size / 2)
+    j_end_sa = j_img + int(searching_area_size / 2) + 1
+
+    search_area = img2_gray[i_ini_sa:i_end_sa, j_ini_sa:j_end_sa]
+    result = lucas_kanade(patch, search_area)
 
     iMax, jMax = np.where(result == np.amax(result))
 
