@@ -21,6 +21,7 @@ import scipy.linalg as scAlg
 import sys
 import cv2
 
+
 def drawLine(l,strFormat,lWidth):
     """
     Draw a line
@@ -179,21 +180,16 @@ if __name__ == '__main__':
         keypoints0 = npz['keypoints0']
         keypoints1 = npz['keypoints1']
         
-        x1 = []
-        x2 = []
-        matches_matrix = []
-
-        for i in range(matches.size):
-            if matches[i] != -1: # here there is a match
-                match_x_0 = keypoints0[i]
-                x1.append(match_x_0)
-                match_x_1 = keypoints1[matches[i]]
-                x2.append(match_x_1)
-                matches_matrix.append([i, matches[i]])
+        valid = matches > -1
+        x1 = keypoints0[valid]
+        x2 = keypoints1[matches[valid]]
         
         x1 = np.array(x1).T
+        np.savetxt('x1.txt', x1)
         x2 = np.array(x2).T
-        matches_matrix = np.array(matches_matrix)
+        np.savetxt('x2.txt', x2)
+
+        # matches_matrix = np.array(matches_matrix)
         # descriptors0 = npz['descriptors0']
         # descriptors1 = npz['descriptors1']
     else:
@@ -209,6 +205,7 @@ if __name__ == '__main__':
     # Read images
     image_pers_1 = cv2.cvtColor(cv2.imread(path_image_1), cv2.COLOR_BGR2RGB)
     image_pers_2 = cv2.cvtColor(cv2.imread(path_image_2), cv2.COLOR_BGR2RGB)
+
 
     x1_homogeneous = np.vstack([x1, np.ones((1, x1.shape[1]))])
     x2_homogeneous = np.vstack([x2, np.ones((1, x2.shape[1]))])
