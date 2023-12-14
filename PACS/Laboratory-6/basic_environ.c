@@ -145,7 +145,7 @@ int main(int argc, char** argv)
   cl_error(err, "Failed to create a compute context for CPU\n");
 
   // 3.1 Create a context, with GPU device
-  // cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[0], 0};
+  cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[1], 0};
   context_GPU = clCreateContext(properties, n_devices[0],&(devices_ids[1][0]), NULL, NULL, &err); //REVISAR NUMERO
   cl_error(err, "Failed to create a compute context for GPU\n");
 
