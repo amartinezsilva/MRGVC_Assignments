@@ -143,13 +143,13 @@ int main(int argc, char** argv)
 
 
   // 3.0 Create a context, with CPU device
-  cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[0], 0};
-  context_CPU = clCreateContext(properties, n_devices[0],&(devices_ids[0][0]), NULL, NULL, &err);
+  cl_context_properties properties_CPU[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[0], 0};
+  context_CPU = clCreateContext(properties_CPU, n_devices[0],&(devices_ids[0][0]), NULL, NULL, &err);
   cl_error(err_CPU, "Failed to create a compute context for CPU\n");
 
   // 3.1 Create a context, with GPU device
-  cl_context_properties properties[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[1], 0};
-  context_GPU = clCreateContext(properties, n_devices[0],&(devices_ids[1][0]), NULL, NULL, &err); //REVISAR NUMERO
+  cl_context_properties properties_GPU[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[1], 0};
+  context_GPU = clCreateContext(properties_GPU, n_devices[0],&(devices_ids[1][0]), NULL, NULL, &err); //REVISAR NUMERO
   cl_error(err_GPU, "Failed to create a compute context for GPU\n");
 
   // 4.0 Create a command queue for CPU device
@@ -323,7 +323,6 @@ int main(int argc, char** argv)
   cl_error(err_GPU, "Failed to set argument 1\n");
   err_GPU = clSetKernelArg(kernel_GPU, 3, sizeof(int), &height);
   cl_error(err_GPU, "Failed to set argument 2\n");
-  float angle = 1.570796; //rotate 90 degrees
   err_GPU = clSetKernelArg(kernel_GPU, 4, sizeof(float), &angle);
   cl_error(err_GPU, "Failed to set argument 3\n");
 
@@ -393,7 +392,7 @@ int main(int argc, char** argv)
   // 10. Read data form device memory back to host memory
   CImg<unsigned char> image_out_GPU(image.width(), image.height(), 1, 3);
   err_GPU = clEnqueueReadBuffer(command_queue_GPU, out_device_object_GPU, CL_TRUE, 0,sizeof(unsigned char)*size, 
-                            image_out.data(), 0, NULL, &kernel_read_bandwidth_GPU);
+                            image_out_GPU.data(), 0, NULL, &kernel_read_bandwidth_GPU);
   cl_error(err_GPU, "Failed to enqueue a read command for GPU\n");
 
   clWaitForEvents(1, &kernel_read_bandwidth_GPU);
