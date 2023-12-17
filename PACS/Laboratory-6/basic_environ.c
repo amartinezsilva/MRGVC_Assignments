@@ -41,7 +41,7 @@ void cl_error(cl_int code, const char *string){
 
 int main(int argc, char** argv)
 {
-  clock_t timer;
+  clock_t timer, execution_timer;
 	timer = clock();
 
   cl_event kernel_time_CPU;
@@ -142,35 +142,41 @@ int main(int argc, char** argv)
   }	
 
 
+  execution_timer = clock();
+
   // 3.0 Create a context, with CPU device
-  cl_context_properties properties_CPU[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[0], 0};
-  context_CPU = clCreateContext(properties_CPU, n_devices[0],&(devices_ids[0][0]), NULL, NULL, &err);
+  cl_context_properties properties_CPU[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[1], 0};
+  context_CPU = clCreateContext(properties_CPU, n_devices[0],&(devices_ids[1][0]), NULL, NULL, &err_CPU);
   cl_error(err_CPU, "Failed to create a compute context for CPU\n");
 
   // 3.1 Create a context, with GPU device
-  cl_context_properties properties_GPU[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[1], 0};
-  context_GPU = clCreateContext(properties_GPU, n_devices[0],&(devices_ids[1][0]), NULL, NULL, &err); //REVISAR NUMERO
+  cl_context_properties properties_GPU[] = { CL_CONTEXT_PLATFORM, (cl_context_properties)platforms_ids[2], 0};
+  context_GPU = clCreateContext(properties_GPU, n_devices[0],&(devices_ids[2][0]), NULL, NULL, &err_GPU); //REVISAR NUMERO
   cl_error(err_GPU, "Failed to create a compute context for GPU\n");
 
   // 4.0 Create a command queue for CPU device
-  cl_command_queue_properties proprt[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
-  command_queue_CPU = clCreateCommandQueueWithProperties( context_CPU, devices_ids[0][0], proprt, &err_CPU);
+  cl_command_queue_properties proprt_CPU[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
+  command_queue_CPU = clCreateCommandQueueWithProperties( context_CPU, devices_ids[1][0], proprt_CPU, &err_CPU);
   cl_error(err_CPU, "Failed to create a command queue for CPU\n");
 
   // 4.1 Create a command queue for GPU device
-  // cl_command_queue_properties proprt[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
-  command_queue_GPU = clCreateCommandQueueWithProperties( context_GPU, devices_ids[1][0], proprt, &err_GPU); //REVISAR NUMERO
+  cl_command_queue_properties proprt_GPU[] = { CL_QUEUE_PROPERTIES, CL_QUEUE_PROFILING_ENABLE, 0 };
+  command_queue_GPU = clCreateCommandQueueWithProperties( context_GPU, devices_ids[2][0], proprt_GPU, &err_GPU); //REVISAR NUMERO
   cl_error(err_GPU, "Failed to create a command queue for GPU\n");
 
   // 2. Load source code of kernel
 
   // Calculate size of the file
   FILE *fileHandler = fopen("kernel_rotation.cl", "r");
+  if (fileHandler == NULL) {
+    fprintf(stderr, "Failed to open the OpenCL source file\n");
+    exit(-1);
+  }
   fseek(fileHandler, 0, SEEK_END);
   size_t fileSize = ftell(fileHandler);
   rewind(fileHandler);
 
-  printf("Memory Footprint of the file buffer: %d bytes\n", fileSize);
+
 
   // read kernel source into buffer
   char * sourceCode = (char*) malloc(fileSize + 1);
@@ -181,7 +187,6 @@ int main(int argc, char** argv)
   // create program from buffer for CPU
   cl_program program_CPU = clCreateProgramWithSource(context_CPU, 1, (const char**)&sourceCode, &fileSize, &err_CPU);
   cl_error(err_CPU, "Failed to create program with source for CPU\n");
-  free(sourceCode);
 
   // create program from buffer for GPU
   cl_program program_GPU = clCreateProgramWithSource(context_GPU, 1, (const char**)&sourceCode, &fileSize, &err_GPU);
@@ -193,14 +198,18 @@ int main(int argc, char** argv)
 
   // 3. Build the executable and check errors
 
-  err_CPU = clBuildProgram(program_CPU, 0, NULL, NULL, NULL, NULL);
-  err_GPU = clBuildProgram(program_GPU, 0, NULL, NULL, NULL, NULL);
+  cl_device_id cpuDevice = devices_ids[1][0];
+  cl_device_id gpuDevice = devices_ids[2][0];
+
+  err_CPU = clBuildProgram(program_CPU, 1, &cpuDevice, NULL, NULL, NULL);
+  err_GPU = clBuildProgram(program_GPU, 1, &gpuDevice, NULL, NULL, NULL);
   if (err_CPU != CL_SUCCESS){
     size_t len;
     char buffer[2048];
 
     printf("Error: Some error at building process of the CPU.\n");
-    clGetProgramBuildInfo(program_CPU, device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    clGetProgramBuildInfo(program_CPU, devices_ids[1][0], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    buffer[len] = '\0';
     printf("%s\n", buffer);
     exit(-1);
   }
@@ -210,7 +219,8 @@ int main(int argc, char** argv)
     char buffer[2048];
 
     printf("Error: Some error at building process of the GPU.\n");
-    clGetProgramBuildInfo(program_GPU, device_id, CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    clGetProgramBuildInfo(program_GPU, devices_ids[2][0], CL_PROGRAM_BUILD_LOG, sizeof(buffer), buffer, &len);
+    buffer[len] = '\0';
     printf("%s\n", buffer);
     exit(-1);
   }
@@ -227,56 +237,69 @@ int main(int argc, char** argv)
   // 5. Create and initialize input and output arrays at host memory
   CImg<unsigned char> image("image.jpg");  // Load image file "image.jpg" at object img
   // image size
-  printf("Image size: %d\n", image.size());
   int width = image.width();
   int height = image.height();
   int spectrum = image.spectrum();
-
-  printf("Image width: %d\n", width);
-  printf("Image heigth: %d\n", height);
-  printf("Image spectrum: %d\n", spectrum);
 
   size_t size = image.size();
 
   // 6.0 Create OpenCL buffers visible to the OpenCl runtime for the CPU device
   cl_ulong total_memory_allocated_CPU = 0;
 
-  cl_mem in_device_object_CPU = clCreateBuffer(context_CPU, CL_MEM_READ_ONLY, sizeof(unsigned char) * size, NULL, &err_CPU);
+  size_t total_images = 3000;
+  double percentage_CPU = 0.5;
+
+  size_t images_to_CPU = static_cast<size_t>(total_images * percentage_CPU);
+  size_t images_to_GPU = total_images - images_to_CPU;
+
+  // Replicate image data in memory
+  size_t total_size = size * total_images;
+  unsigned char* all_images_data = new unsigned char[total_size];
+
+  for (size_t i = 0; i < total_images; ++i) {
+      // Copy image data into the replicated block
+      std::memcpy(&all_images_data[i * size], image.data(), size);
+  }
+
+  unsigned char* image_data_for_CPU = &all_images_data[0]; // Point to the first image data
+  unsigned char* image_data_for_GPU = &all_images_data[images_to_CPU * size]; // Point to the first image data assigned to the GPU
+
+
+  cl_mem in_device_object_CPU = clCreateBuffer(context_CPU, CL_MEM_READ_ONLY, sizeof(unsigned char) * size * images_to_CPU, NULL, &err_CPU);
   cl_error(err_CPU, "Failed to create memory buffer at CPU device\n");
   cl_ulong in_device_mem_size_CPU;
   clGetMemObjectInfo(in_device_object_CPU, CL_MEM_SIZE, sizeof(cl_ulong), &in_device_mem_size_CPU, NULL);
   total_memory_allocated_CPU += in_device_mem_size_CPU;
 
-  cl_mem out_device_object_CPU = clCreateBuffer(context_CPU, CL_MEM_WRITE_ONLY, sizeof(unsigned char) * size, NULL, &err_CPU);
+  cl_mem out_device_object_CPU = clCreateBuffer(context_CPU, CL_MEM_WRITE_ONLY, sizeof(unsigned char) * size * images_to_CPU, NULL, &err_CPU);
   cl_error(err_CPU, "Failed to create memory buffer at CPU device\n");
   cl_ulong out_device_mem_size_CPU;
   clGetMemObjectInfo(out_device_object_CPU, CL_MEM_SIZE, sizeof(cl_ulong), &out_device_mem_size_CPU, NULL);
   total_memory_allocated_CPU += out_device_mem_size_CPU;
 
-  printf("Memory Footprint of the Read/Write buffers for CPU: %lu bytes\n", total_memory_allocated_CPU);
+
 
   // 6.1 Create OpenCL buffers visible to the OpenCl runtime for the GPU device
   cl_ulong total_memory_allocated_GPU = 0;
 
-  cl_mem in_device_object_GPU = clCreateBuffer(context_GPU, CL_MEM_READ_ONLY, sizeof(unsigned char) * size, NULL, &err_GPU);
+  cl_mem in_device_object_GPU = clCreateBuffer(context_GPU, CL_MEM_READ_ONLY, sizeof(unsigned char) * size * images_to_GPU, NULL, &err_GPU);
   cl_error(err_GPU, "Failed to create memory buffer at GPU device\n");
   cl_ulong in_device_mem_size_GPU;
   clGetMemObjectInfo(in_device_object_GPU, CL_MEM_SIZE, sizeof(cl_ulong), &in_device_mem_size_GPU, NULL);
   total_memory_allocated_GPU += in_device_mem_size_GPU;
 
-  cl_mem out_device_object_GPU = clCreateBuffer(context_GPU, CL_MEM_WRITE_ONLY, sizeof(unsigned char) * size, NULL, &err_GPU);
+  cl_mem out_device_object_GPU = clCreateBuffer(context_GPU, CL_MEM_WRITE_ONLY, sizeof(unsigned char) * size * images_to_GPU, NULL, &err_GPU);
   cl_error(err_GPU, "Failed to create memory buffer at GPU device\n");
   cl_ulong out_device_mem_size_GPU;
   clGetMemObjectInfo(out_device_object_GPU, CL_MEM_SIZE, sizeof(cl_ulong), &out_device_mem_size_GPU, NULL);
   total_memory_allocated_GPU += out_device_mem_size_GPU;
 
-  printf("Memory Footprint of the Read/Write buffers for GPU: %lu bytes\n", total_memory_allocated_GPU);
 
 
 
   // 7.0 Write data into the memory object for CPU
-  err_CPU = clEnqueueWriteBuffer(command_queue_CPU, in_device_object_CPU, CL_TRUE, 0, sizeof(unsigned char) * size,
-                              image.data(), 0, NULL, &kernel_write_bandwidth_CPU);
+  err_CPU = clEnqueueWriteBuffer(command_queue_CPU, in_device_object_CPU, CL_TRUE, 0, sizeof(unsigned char) * size * images_to_CPU,
+                              image_data_for_CPU, 0, NULL, &kernel_write_bandwidth_CPU);
   cl_error(err_CPU, "Failed to enqueue a write command for CPU\n");
 
   clWaitForEvents(1, &kernel_write_bandwidth_CPU);
@@ -286,12 +309,12 @@ int main(int argc, char** argv)
   clGetEventProfilingInfo(kernel_write_bandwidth_CPU, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_write_bandwidth_time_end_CPU, NULL);
 
   double kernel_write_bandwidth_time_CPU = (double)(kernel_write_bandwidth_time_end_CPU - kernel_write_bandwidth_time_start_CPU);
-  printf("OpenCL write buffer time for CPU is: %0.3f milliseconds\n", kernel_write_bandwidth_time_CPU / 1000000.0); // converted to milliseconds
+  
 
   // 7.1 Write data into the memory object for GPU
-  err_GPU = clEnqueueWriteBuffer(command_queue_GPU, in_device_object_GPU, CL_TRUE, 0, sizeof(unsigned char) * size,
-                              image.data(), 0, NULL, &kernel_write_bandwidth_GPU);
-  cl_error(err, "Failed to enqueue a write command for GPU\n");
+  err_GPU = clEnqueueWriteBuffer(command_queue_GPU, in_device_object_GPU, CL_TRUE, 0, sizeof(unsigned char) * size * images_to_GPU,
+                              image_data_for_GPU, 0, NULL, &kernel_write_bandwidth_GPU);
+  cl_error(err_GPU, "Failed to enqueue a write command for GPU\n");
 
   clWaitForEvents(1, &kernel_write_bandwidth_GPU);
 
@@ -300,31 +323,30 @@ int main(int argc, char** argv)
   clGetEventProfilingInfo(kernel_write_bandwidth_GPU, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_write_bandwidth_time_end_GPU, NULL);
 
   double kernel_write_bandwidth_time_GPU = (double)(kernel_write_bandwidth_time_end_GPU - kernel_write_bandwidth_time_start_GPU);
-  printf("OpenCL write buffer time for GPU is: %0.3f milliseconds\n", kernel_write_bandwidth_time_GPU / 1000000.0); // converted to milliseconds
 
 
   // 8.0 Set the arguments to the kernel
   err_CPU = clSetKernelArg(kernel_CPU, 0, sizeof(cl_mem), &in_device_object_CPU);
-  cl_error(err_CPU, "Failed to set argument 0\n");
+  cl_error(err_CPU, "Failed to set argument 0 in CPU\n");
   err_CPU = clSetKernelArg(kernel_CPU, 1, sizeof(cl_mem), &out_device_object_CPU);
   err_CPU = clSetKernelArg(kernel_CPU, 2, sizeof(int), &width);
-  cl_error(err_CPU, "Failed to set argument 1\n");
+  cl_error(err_CPU, "Failed to set argument 1 in CPU\n");
   err_CPU = clSetKernelArg(kernel_CPU, 3, sizeof(int), &height);
-  cl_error(err_CPU, "Failed to set argument 2\n");
+  cl_error(err_CPU, "Failed to set argument 2 in CPU\n");
   float angle = 1.570796; //rotate 90 degrees
   err_CPU = clSetKernelArg(kernel_CPU, 4, sizeof(float), &angle);
-  cl_error(err_CPU, "Failed to set argument 3\n");
+  cl_error(err_CPU, "Failed to set argument 3 in CPU\n");
 
   // 8.1. Set the arguments to the kernel
   err_GPU = clSetKernelArg(kernel_GPU, 0, sizeof(cl_mem), &in_device_object_GPU);
-  cl_error(err_GPU, "Failed to set argument 0\n");
+  cl_error(err_GPU, "Failed to set argument 0 in GPU\n");
   err_GPU = clSetKernelArg(kernel_GPU, 1, sizeof(cl_mem), &out_device_object_GPU);
   err_GPU = clSetKernelArg(kernel_GPU, 2, sizeof(int), &width);
-  cl_error(err_GPU, "Failed to set argument 1\n");
+  cl_error(err_GPU, "Failed to set argument 1 in GPU\n");
   err_GPU = clSetKernelArg(kernel_GPU, 3, sizeof(int), &height);
-  cl_error(err_GPU, "Failed to set argument 2\n");
+  cl_error(err_GPU, "Failed to set argument 2 in GPU\n");
   err_GPU = clSetKernelArg(kernel_GPU, 4, sizeof(float), &angle);
-  cl_error(err_GPU, "Failed to set argument 3\n");
+  cl_error(err_GPU, "Failed to set argument 3 in GPU\n");
 
 
   // 9.0 Launch Kernel for CPU
@@ -332,7 +354,7 @@ int main(int argc, char** argv)
   const size_t global_size[3] = {image.width() , image.height(), image.spectrum()};
 
   err_CPU = clEnqueueNDRangeKernel(command_queue_CPU, kernel_CPU, 3, NULL, global_size, NULL, 0, NULL, &kernel_time_CPU);
-  cl_error(err_CPU, "Failed to launch kernel to the device\n");
+  cl_error(err_CPU, "Failed to launch kernel to the CPU\n");
 
   // After the kernel execution
   clWaitForEvents(1, &kernel_time_CPU);
@@ -342,12 +364,12 @@ int main(int argc, char** argv)
   clGetEventProfilingInfo(kernel_time_CPU, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_time_end_CPU, NULL);
 
   double kernel_execution_time_CPU = (double)(kernel_time_end_CPU - kernel_time_start_CPU); 
-  printf("OpenCl Kernel in CPU execution time is: %0.3f milliseconds \n",kernel_execution_time_CPU / 1000000.0); // converted to miliseconds
+  
 
   // 9.1 Launch Kernel for GPU
 
   err_GPU = clEnqueueNDRangeKernel(command_queue_GPU, kernel_GPU, 3, NULL, global_size, NULL, 0, NULL, &kernel_time_GPU);
-  cl_error(err_GPU, "Failed to launch kernel to the device\n");
+  cl_error(err_GPU, "Failed to launch kernel to the GPU\n");
 
   // After the kernel execution
   clWaitForEvents(1, &kernel_time_GPU);
@@ -357,64 +379,94 @@ int main(int argc, char** argv)
   clGetEventProfilingInfo(kernel_time_GPU, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_time_end_GPU, NULL);
 
   double kernel_execution_time_GPU = (double)(kernel_time_end_GPU - kernel_time_start_GPU); 
-  printf("OpenCl Kernel execution time is: %0.3f milliseconds \n",kernel_execution_time_GPU / 1000000.0); // converted to miliseconds
 
 
-  // 10. Read data form device memory back to host memory
-  CImg<unsigned char> image_out_CPU(image.width(), image.height(), 1, 3);
-  err_CPU = clEnqueueReadBuffer(command_queue_CPU, out_device_object_CPU, CL_TRUE, 0,sizeof(unsigned char)*size, 
-                            image_out_CPU.data(), 0, NULL, &kernel_read_bandwidth_CPU);
-  cl_error(err, "Failed to enqueue a read command for CPU\n");
+  // 10.0 Read data form device memory back to host memory from CPU
+  size_t data_transfer_size = sizeof(unsigned char) * size;
 
-  clWaitForEvents(1, &kernel_read_bandwidth_CPU);
+  CImg<unsigned char> image_out_CPU_all(image.width(), image.height(), 1, 3 * images_to_CPU);
+  for (int i = 0; i < images_to_CPU; ++i) {
+    err_CPU = clEnqueueReadBuffer(command_queue_CPU, out_device_object_CPU, CL_TRUE, i * data_transfer_size,
+                                  data_transfer_size, &image_out_CPU_all(i * size), 0, NULL, &kernel_read_bandwidth_CPU);
+    cl_error(err_CPU, "Failed to enqueue a read command for CPU\n");
+  }
+
+  clWaitForEvents(images_to_CPU, &kernel_read_bandwidth_CPU);
+
 
   cl_ulong kernel_read_bandwidth_time_start_CPU, kernel_read_bandwidth_time_end_CPU;
   clGetEventProfilingInfo(kernel_read_bandwidth_CPU, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &kernel_read_bandwidth_time_start_CPU, NULL);
   clGetEventProfilingInfo(kernel_read_bandwidth_CPU, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_read_bandwidth_time_end_CPU, NULL);
 
   double kernel_read_bandwidth_time_CPU = (double)(kernel_read_bandwidth_time_end_CPU - kernel_read_bandwidth_time_start_CPU); 
-  printf("OpenCl read buffer time for CPU is: %0.3f milliseconds \n",kernel_read_bandwidth_time_CPU / 1000000.0); // converted to miliseconds
 
 
-  size_t data_transfer_size = sizeof(unsigned char) * size;
-  double bandwidth_to_kernel_CPU = (double)data_transfer_size / (kernel_write_bandwidth_time_CPU * 1.0e-3);
-  double bandwidth_from_kernel_CPU = (double)data_transfer_size / (kernel_read_bandwidth_time_CPU * 1.0e-3);
-
-  printf("Bandwidth of CPU to Kernel: %f bytes/ms\n", bandwidth_to_kernel_CPU);
-  printf("Bandwidth of CPU from Kernel: %f bytes/ms\n", bandwidth_from_kernel_CPU);
-
-  size_t total_work = image.width() * image.height() * image.spectrum();
-  double throughput_CPU = (double)total_work / (kernel_execution_time_CPU * 1.0e-3);
-
-  printf("Throughput of the Kernel in CPU: %f pixels/ms\n", throughput_CPU);
+  double bandwidth_to_kernel_CPU = (double)(data_transfer_size * images_to_CPU) / (kernel_write_bandwidth_time_CPU * 1.0e-3);
+  double bandwidth_from_kernel_CPU = (double)(data_transfer_size * images_to_CPU) / (kernel_read_bandwidth_time_CPU * 1.0e-3);
 
 
-  // 10. Read data form device memory back to host memory
-  CImg<unsigned char> image_out_GPU(image.width(), image.height(), 1, 3);
-  err_GPU = clEnqueueReadBuffer(command_queue_GPU, out_device_object_GPU, CL_TRUE, 0,sizeof(unsigned char)*size, 
-                            image_out_GPU.data(), 0, NULL, &kernel_read_bandwidth_GPU);
-  cl_error(err_GPU, "Failed to enqueue a read command for GPU\n");
+  size_t total_work_CPU = image.width() * image.height() * image.spectrum() * images_to_CPU;
+  double throughput_CPU = (double)total_work_CPU / (kernel_execution_time_CPU * 1.0e-3);
 
-  clWaitForEvents(1, &kernel_read_bandwidth_GPU);
+
+  // 10.1 Read data form device memory back to host memory from GPU
+  CImg<unsigned char> image_out_GPU_all(image.width(), image.height(), 1, 3 * images_to_GPU);
+  for (int i = 0; i < images_to_GPU; ++i) {
+    err_GPU = clEnqueueReadBuffer(command_queue_GPU, out_device_object_GPU, CL_TRUE, i * data_transfer_size,
+                                  data_transfer_size, &image_out_GPU_all(i * size), 0, NULL, &kernel_read_bandwidth_GPU);
+    cl_error(err_GPU, "Failed to enqueue a read command for GPU\n");
+  }
+
+  clWaitForEvents(images_to_GPU, &kernel_read_bandwidth_GPU);
 
   cl_ulong kernel_read_bandwidth_time_start_GPU, kernel_read_bandwidth_time_end_GPU;
   clGetEventProfilingInfo(kernel_read_bandwidth_GPU, CL_PROFILING_COMMAND_START, sizeof(cl_ulong), &kernel_read_bandwidth_time_start_GPU, NULL);
   clGetEventProfilingInfo(kernel_read_bandwidth_GPU, CL_PROFILING_COMMAND_END, sizeof(cl_ulong), &kernel_read_bandwidth_time_end_GPU, NULL);
 
   double kernel_read_bandwidth_time_GPU = (double)(kernel_read_bandwidth_time_end_GPU - kernel_read_bandwidth_time_start_GPU); 
+  
+
+  double bandwidth_to_kernel_GPU = (double)(data_transfer_size * images_to_CPU) / (kernel_write_bandwidth_time_GPU * 1.0e-3);
+  double bandwidth_from_kernel_GPU = (double)(data_transfer_size * images_to_CPU) / (kernel_read_bandwidth_time_GPU * 1.0e-3);
+
+  size_t total_work_GPU = image.width() * image.height() * image.spectrum() * images_to_GPU;
+  double throughput_GPU = (double)total_work_GPU / (kernel_execution_time_GPU * 1.0e-3);
+
+  
+
+
+  execution_timer = clock() - execution_timer;
+  printf("Execution time of the program before releasing memory allocated and prints in seconds: %f s\n", ((float)execution_timer)/CLOCKS_PER_SEC);
+  printf("\n");
+
+  printf("Image size: %d\n", image.size());
+  printf("Image width: %d\n", width);
+  printf("Image heigth: %d\n", height);
+  printf("Image spectrum: %d\n", spectrum);
+
+  printf("Memory Footprint of the auxiliar buffer: %zu bytes\n", t_buf * sizeof(char));
+  printf("Memory Footprint of the file buffer: %d bytes\n", fileSize);
+
+  printf("Images to process: %d \n", total_images);
+
+  printf("\n");
+  printf("Images to CPU: %d \n", images_to_CPU);
+  printf("Memory Footprint of the Read/Write buffers for CPU: %lu bytes\n", total_memory_allocated_CPU);
+  printf("OpenCL write buffer time for CPU is: %0.3f milliseconds\n", kernel_write_bandwidth_time_CPU / 1000000.0); // converted to milliseconds
+  printf("OpenCl Kernel in CPU execution time is: %0.3f milliseconds \n",kernel_execution_time_CPU / 1000000.0); // converted to miliseconds
+  printf("OpenCl read buffer time for CPU is: %0.3f milliseconds \n",kernel_read_bandwidth_time_CPU / 1000000.0); // converted to miliseconds
+  printf("Bandwidth of CPU to Kernel: %f bytes/ms\n", bandwidth_to_kernel_CPU);
+  printf("Bandwidth of CPU from Kernel: %f bytes/ms\n", bandwidth_from_kernel_CPU);
+  printf("Throughput of the Kernel in CPU: %f pixels/ms\n", throughput_CPU);
+  printf("\n");
+  printf("Images to GPU: %d \n", images_to_GPU);
+  printf("Memory Footprint of the Read/Write buffers for GPU: %lu bytes\n", total_memory_allocated_GPU);
+  printf("OpenCL write buffer time for GPU is: %0.3f milliseconds\n", kernel_write_bandwidth_time_GPU / 1000000.0); // converted to milliseconds
+  printf("OpenCl Kernel in GPU execution time is: %0.3f milliseconds \n",kernel_execution_time_GPU / 1000000.0); // converted to miliseconds
   printf("OpenCl read buffer for GPU time is: %0.3f milliseconds \n",kernel_read_bandwidth_time_GPU / 1000000.0); // converted to miliseconds
-
-
-  double bandwidth_to_kernel_GPU = (double)data_transfer_size / (kernel_write_bandwidth_time_GPU * 1.0e-3);
-  double bandwidth_from_kernel_GPU = (double)data_transfer_size / (kernel_read_bandwidth_time_GPU * 1.0e-3);
-
   printf("Bandwidth of GPU to Kernel: %f bytes/ms\n", bandwidth_to_kernel_GPU);
   printf("Bandwidth of GPU from Kernel: %f bytes/ms\n", bandwidth_from_kernel_GPU);
-
-  double throughput_GPU = (double)total_work / (kernel_execution_time_GPU * 1.0e-3);
-
   printf("Throughput of GPU of the Kernel: %f pixels/ms\n", throughput_GPU);
-
 
   // 11. Check correctness of execution
   // Display the image
