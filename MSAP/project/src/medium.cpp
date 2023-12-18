@@ -36,13 +36,15 @@ public:
         mRec.pdfSuccess /= 3;
         mRec.pdfFailure /= 3;
         Color3f temp = m_sigmaT * (-distance);
+        std::cout << "mRec.temp: " << expf(temp.g());
         mRec.transmittance = Color3f(expf(temp.r()), expf(temp.g()), expf(temp.b()));
         mRec.sigmaA = m_sigmaA;
         mRec.sigmaS = m_sigmaS;
 
         mRec.medium = this;
-        if (mRec.transmittance.maxCoeff() < 1e-20)
-            mRec.transmittance = Color3f(0.0f);
+        // if (mRec.transmittance.maxCoeff() < 1e-20)
+        //     std::cout << "pRec.pdf: " << mRec.transmittance;
+        //     mRec.transmittance = Color3f(0.0f);
 
     }
 
@@ -56,10 +58,13 @@ public:
     Color3f evalTransmittance(const Ray3f &ray, const Point2f &sample) const {
         float negLength = ray.mint - ray.maxt;
         Color3f transmittance;
+        
         for (int i=0; i<3; ++i){
-            if(m_sigmaT[i] != 0) {
+            if(m_sigmaT[i] != 0 && negLength != 0) {
                 transmittance[i] = std::exp(m_sigmaT[i] * negLength);
             } else {
+                cout << "transmittance: ";
+                //cout << "transmittance: " << medium[0]->evalTransmittance(ray, sampler->next1D());
                 transmittance[i] = 1.0f;
             }
         }

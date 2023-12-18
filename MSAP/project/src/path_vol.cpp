@@ -21,6 +21,7 @@ public:
 	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
 		Color3f Lo(0.);
 		Color3f Li_em(0.);
+		Color3f medium_throughput(1.0f, 1.0f, 1.0f);
 
 		// Find the surface that is visible in the requested direction 
 		Intersection its;
@@ -28,26 +29,34 @@ public:
 			return scene->getBackground(ray);
 
 
-		// ALREADY INSIDE MEDIUM
-		Color3f medium_throughput(1.0f, 1.0f, 1.0f);
-		MediumSamplingRecord mRec;
-
-		std::vector<Medium *> Medium = scene->getMedia();
-        PhaseFunctionQueryRecord pRec;
-		const PhaseFunction *phase = Medium[0]->getPhaseFunction();
-        medium_throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;
-
-		pRec = PhaseFunctionQueryRecord(-ray.d, Vector3f(0.0f), EMeasure::ESolidAngle);
-		float phaseVal = phase->sample(pRec, sampler->next2D());
-
-		if (phaseVal == 0){
-            std::cout << "phaseVal is zero!" << std::endl;
-        }
-        medium_throughput *= phaseVal;
-
-
 		float em_pdf = 0.0f, mat_pdf = 0.0f;
 		float w_em = 0.0f, w_mat = 0.0f;
+
+		// ALREADY INSIDE MEDIUM
+		std::vector<Medium *> medium = scene->getMedia();
+		PhaseFunctionQueryRecord pRec(-ray.d, Vector3f(0.0f), ESolidAngle);
+    	medium[0]->getPhaseFunction()->sample(pRec, sampler->next2D());
+
+
+		//std::string summary = medium[0]->toString();
+		//std::cout << summary << std::endl;
+		//std::cout << "phase function: " << phaseVal;
+		MediumSamplingRecord mRec;
+		medium[0]->eval(ray, mRec);
+		medium_throughput *= pRec.pdf * mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;	
+
+		// creo que ahora lo que hay que hacer es quitar esto
+
+		// la idea creo que es, mediante montecarlo cojo un punto de mi rayo. COMO? no se
+		// a toda la L, pase lo que pase le tengo que añadir el transmitance desde la camara ray.mixt hasta ese punto
+		// posteriormente con el inscattering
+		// 		- tengo que añadir el transmitance desde el punto hasta el emitter, con el pdf del emiter
+		// 		- y por otro ladotengo que crear una nueva direccion con wo
+		//			- si es llego a un emmiter devuelvo Lmat, con el transmitance desde el punto hasta el emitter y la phase function the heyseygreeinstein
+		// por otro lado con direct light
+		//      - simplemente transmitance desde el punto de en el que ha chocado con el objeto hasta el no se exactamente donde
+		//      - simplemente transmitance desde el punto de en el que ha chocado con el objeto hasta el emitter
+
 
 		EmitterQueryRecord emitterRecord(its.p);
 
@@ -91,7 +100,7 @@ public:
 			if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
 			else w_em = em_pdf;
 			
-			Li_em += w_em * Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
+			Li_em +=  w_em * Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
 		}
 
 		em_pdf = 0.0f, mat_pdf = 0.0f;
@@ -138,7 +147,7 @@ public:
 		// BSDF contribution
 		Lo += w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
 
-		return Lo;
+		return Lo * medium_throughput;
 	}
 
 	std::string toString() const {
