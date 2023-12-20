@@ -17,7 +17,7 @@
 import numpy as np
 import cv2 as cv
 
-from CV.labSession6.interpolationFunctions import numerical_gradient
+from interpolationFunctions import numerical_gradient, int_bilineal
 
 
 def read_image(filename: str, ):
@@ -80,38 +80,93 @@ def seed_estimation_NCC_single_point(img1_gray, img2_gray, i_img, j_img, patch_h
 
 def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     """
-    Estimate normalized cross correlation values for a patch in a searching area.
+    Lucas Kanade m for a patch in a searching area.
     """
-    patch_size = patch.size()
-    # Compute the Jacobian matrix
-    J0 = np.zeros((2, patch_size**2), dtype=np.float32)
-    margin = int(patch_size/2)
-
     margin_y = int(patch.shape[0]/2)
     margin_x = int(patch.shape[1]/2)
-    x = int(search_area.shape[0]/2)
-    y = int(search_area.shape[1]/2)
 
+    Axx = 0
+    Axy = 0
+    Ayy = 0
+
+    J_0 = []
+    #Compute gradients
+    for i in range(margin_y, patch.shape[0] - margin_y):
+        for j in range(margin_x, patch.shape[1] - margin_x):
+            print(f"Processing pixel ({i}, {j})")
+            Ix_y = numerical_gradient(patch, np.array([[i,j]]))
+            J_0.append(Ix_y.flatten().tolist())
+            Axx += Ix_y[0, 0] ** 2
+            Axy += Ix_y[0, 0] * Ix_y[0, 1]
+            Ayy += Ix_y[0, 1] ** 2
+
+    J_0 = np.array(J_0)
+    # Construct A matrix
+    A = np.array([[Axx, Axy], [Axy, Ayy]])
+
+    print("A:")
+    print(A)
+    print("A determinant:")
+    print(np.linalg.det(A))
+
+    # Initialize optical flow vector
+    u = np.zeros((1,2))
+    
+    result = np.zeros(search_area.shape, dtype=float)
+    delta_u = np.ones((1, 2))
+
+    while np.linalg.norm(delta_u) >= 1e-2:
+
+        b = np.zeros((2,1))
+
+        for i in range(margin_y, search_area.shape[0] - margin_y):
+            for j in range(margin_x, search_area.shape[1] - margin_x):
+                print(f"Processing pixel ({i}, {j})")    
+                #Extract patch from search area
+                i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
+                
+                # Step 2: Compute the warped patch I1(xi+u) from u using int_bilinear()
+                warped_patch = int_bilineal(i1, np.array([[i,j]]) + u)
+
+                #Step 3: Compute error between patches
+                error = warped_patch -  patch[i,j] #not sure about patch indexing here
+
+                # Step 4: Compute b from the error between patches and gradients
+                Ix_y = numerical_gradient(patch, np.array([[i, j]]))
+                b[0,:]+= np.dot(error, Ix_y[:, 0])
+                b[1,:]+= np.dot(error, Ix_y[:, 1])     
+        
+        #Solve for uv
+        delta_u = np.linalg.solve(A, -b)
+        # Accumulate optical flow vector
+        u += delta_u.T
+
+        print(f"Iteration - Error: {np.linalg.norm(delta_u)}, DeltaU: {delta_u}")
+
+    print("Converged!")
+    #Calculate the result with final value of u
     for i in range(margin_y, search_area.shape[0] - margin_y):
         for j in range(margin_x, search_area.shape[1] - margin_x):
-            px = numerical_gradient(search_area, np.array([[x-margin_x+j, y+i]]))[0]
-            py = numerical_gradient(search_area, np.array([[x+j, y-margin_y+i]]))[0]
-            J0[0, i*patch_size+j] = px[0]
-            J0[1, i*patch_size+j] = py[1]
+            i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
+            result[i,j] = int_bilineal(i1, np.array([[i,j]]) + u)
 
-        return result
-
+    return result
+        
 def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, patch_half_size: int = 5, searching_area_size: int = 100):
-
+    
     # Attention!! we are not checking the padding
     patch = img1_gray[i_img - patch_half_size:i_img + patch_half_size + 1, j_img - patch_half_size:j_img + patch_half_size + 1]
-
+    
     i_ini_sa = i_img - int(searching_area_size / 2)
     i_end_sa = i_img + int(searching_area_size / 2) + 1
     j_ini_sa = j_img - int(searching_area_size / 2)
     j_end_sa = j_img + int(searching_area_size / 2) + 1
 
     search_area = img2_gray[i_ini_sa:i_end_sa, j_ini_sa:j_end_sa]
+
+    print("Patch shape: " + str(patch.shape))
+    print("Search area shape: " + str(search_area.shape))
+
     result = lucas_kanade(patch, search_area)
 
     iMax, jMax = np.where(result == np.amax(result))
@@ -140,6 +195,18 @@ if __name__ == '__main__':
     seed_optical_flow_sparse = np.zeros((points_selected.shape))
     for k in range(0,points_selected.shape[0]):
         i_flow, j_flow = seed_estimation_NCC_single_point(img1_gray, img2_gray, points_selected[k,1], points_selected[k,0], template_size_half, searching_area_size)
+        seed_optical_flow_sparse[k,:] = np.hstack((j_flow,i_flow))
+
+    print(seed_optical_flow_sparse)
+
+    #### Lucas - Kanade #####
+
+    template_size_half = 5
+    searching_area_size: int = 15
+    print("Lucas-Kanade method")
+    seed_optical_flow_sparse = np.zeros((points_selected.shape))
+    for k in range(0,points_selected.shape[0]):
+        i_flow, j_flow = seed_estimation_kanade_single_point(img1_gray, img2_gray, points_selected[k,1], points_selected[k,0], template_size_half, searching_area_size)
         seed_optical_flow_sparse[k,:] = np.hstack((j_flow,i_flow))
 
     print(seed_optical_flow_sparse)

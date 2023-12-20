@@ -20,8 +20,8 @@ def numerical_gradient(img_int: np.array, point: np.array)->np.array:
     """
     https://es.wikipedia.org/wiki/Interpolaci%C3%B3n_bilineal
     :param img:image to interpolate
-    :param point: point subpixel
-    :return: 
+    :param point: [[y0,x0],[y1,x1], ... [yn,xn]]
+    :return: Ix_y = [[Ix_0,Iy_0],[Ix_1,Iy_1], ... [Ix_n,Iy_n]]
     """
 
     a = np.zeros((point.shape[0], 2), dtype= np.float)
@@ -44,7 +44,8 @@ def int_bilineal(img: np.array, point: np.array)->np.array:
 
     :param img:image to interpolate
     :param point: point subpixel
-    :return: 
+    point = [[y0,x0],[y1,x1], ... [yn,xn]]
+    :return: [gray0,gray1, .... grayn]
     """
     A = np.zeros((point.shape[0], 2, 2), dtype= np.float)
     point_lu = point.astype(np.int)
