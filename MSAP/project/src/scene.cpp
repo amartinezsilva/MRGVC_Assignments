@@ -26,6 +26,7 @@
 #include <nori/camera.h>
 #include <nori/emitter.h>
 #include <nori/medium.h>
+#include <nori/volume.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -124,6 +125,14 @@ void Scene::addChild(NoriObject *obj, const std::string& name) {
             m_media.push_back(static_cast<Medium*>(obj));
             break;
 
+        case EVolume:
+            {
+                Volume *vol = static_cast<Volume *>(obj);
+                m_volumes.push_back(vol);
+                break;
+            }
+            break;
+
         default:
             throw NoriException("Scene::addChild(<%s>) is not supported!",
                 classTypeName(obj->getClassType()));
@@ -149,30 +158,29 @@ std::string Scene::toString() const {
         meshes += "\n";
     }
 
-	std::string lights;
-	for (size_t i = 0; i < m_emitters.size(); ++i) {
-		lights += std::string("  ") + indent(m_emitters[i]->toString(), 2);
-		if (i + 1 < m_emitters.size())
-			lights += ",";
-		lights += "\n";
-	}
-
+    std::string volumes;
+    for (size_t i=0; i<m_volumes.size(); ++i) {
+        volumes += std::string("  ") + indent(m_volumes[i]->toString(), 2);
+        if (i + 1 < m_volumes.size())
+            volumes += ",";
+        volumes += "\n";
+    }
 
     return tfm::format(
         "Scene[\n"
         "  integrator = %s,\n"
         "  sampler = %s\n"
         "  camera = %s,\n"
+        "  volumes = {\n"
+        "  %s  }\n"
         "  meshes = {\n"
         "  %s  }\n"
-		"  emitters = {\n"
-		"  %s  }\n"
         "]",
         indent(m_integrator->toString()),
         indent(m_sampler->toString()),
         indent(m_camera->toString()),
-        indent(meshes, 2),
-		indent(lights, 2)
+        indent(volumes, 2),
+        indent(meshes, 2)
     );
 }
 

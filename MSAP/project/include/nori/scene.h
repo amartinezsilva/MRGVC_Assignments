@@ -22,7 +22,7 @@
 #pragma once
 
 #include <nori/accel.h>
-//#include <nori/volume.h>
+#include <nori/volume.h>
 #include <nori/medium.h>
 
 NORI_NAMESPACE_BEGIN
@@ -73,7 +73,7 @@ public:
     const std::vector<Medium *> &getMedia() const { return m_media; }
 
     /// Return a reference to an array containing all volumes
-    // const std::vector<Volume *> &getVolumes() const { return m_volumes; }
+    const std::vector<Volume *> &getVolumes() const { return m_volumes; }
 
 	/// Sample emitter
 	const Emitter *sampleEmitter(float rnd, float &pdf) const;
@@ -147,7 +147,7 @@ public:
 private:
     std::vector<Mesh *> m_meshes;
 	std::vector<Emitter *> m_emitters;
-    //std::vector<Volume *> m_volumes;
+    std::vector<Volume *> m_volumes;
     std::vector<Medium *> m_media;
 	Emitter *m_enviromentalEmitter = nullptr;
 	

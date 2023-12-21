@@ -12,6 +12,56 @@ public:
         m_albedo = m_sigmaS / m_sigmaT;
     }
 
+    bool sampleDistance(const Ray3f &ray, MediumSamplingRecord &mRec, const Point2f &sample) const {
+        float rand = sample(0);
+        float sampledDistance;
+        float samplingDensity;
+
+        // extintion coefficient
+        int channel = std::min((int) (sample(1) * 3.0f), 2);
+        samplingDensity = m_sigmaT[channel];
+
+        sampledDistance = -std::log(1.0f - rand) / samplingDensity;
+
+        float distSurf = ray.maxt - ray.mint;
+        bool success = true;
+        if (sampledDistance < distSurf) {
+            mRec.t = sampledDistance + ray.mint;
+            mRec.p = ray(mRec.t);
+            mRec.sigmaA = m_sigmaA;
+            mRec.sigmaS = m_sigmaS;
+            mRec.medium = this;
+
+            /* Fail if there is no forward progress
+               (e.g. due to roundoff errors) */
+            if (mRec.p == ray.o)
+                success = false;
+        } else {
+            sampledDistance = distSurf;
+            success = false;
+        }
+
+
+        mRec.pdfFailure = 0.0f;
+        mRec.pdfSuccess = 0.0f;
+        for (int i=0; i<3; ++i) {
+            float tmp = std::exp(-m_sigmaT[i] * sampledDistance);
+            mRec.pdfFailure += tmp;
+            mRec.pdfSuccess += m_sigmaT[i] * tmp;
+        }
+        mRec.pdfFailure /= 3.0f;
+        mRec.pdfSuccess /= 3.0f;
+
+        Color3f temp = (m_sigmaT * (-sampledDistance));
+        mRec.transmittance = Color3f(expf(temp.r()), expf(temp.g()), expf(temp.b()));
+
+        mRec.medium = this;
+        if (mRec.transmittance.maxCoeff() < 1e-20)
+            mRec.transmittance = Color3f(0.0f);
+
+        return success;
+    }
+    
     /**
      * \brief Compute the 1D density of sampling distance \a ray.maxt
      * along the ray using the sampling strategy implemented by

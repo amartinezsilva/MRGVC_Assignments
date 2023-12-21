@@ -160,6 +160,9 @@ public:
     /// Return a pointer to an attached area emitter instance (const version)
     const Emitter *getEmitter() const { return m_emitter; }
 
+    /// Is this mesh a bumpmap?
+    bool hasMedium() const { return m_medium != nullptr; }
+
     /// Return a pointer to an attached bump map instance (const version)
     const Medium *getMedium() const { return m_medium; }
 
