@@ -89,18 +89,28 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     Axy = 0
     Ayy = 0
 
-    J_0 = []
+    points = []
     #Compute gradients
-    for i in range(margin_y, patch.shape[0] - margin_y):
-        for j in range(margin_x, patch.shape[1] - margin_x):
-            print(f"Processing pixel ({i}, {j})")
-            Ix_y = numerical_gradient(patch, np.array([[i,j]]))
-            J_0.append(Ix_y.flatten().tolist())
-            Axx += Ix_y[0, 0] ** 2
-            Axy += Ix_y[0, 0] * Ix_y[0, 1]
-            Ayy += Ix_y[0, 1] ** 2
 
-    J_0 = np.array(J_0)
+    for i in range(margin_y, search_area.shape[0] - margin_y):
+        for j in range(margin_x, search_area.shape[1] - margin_x):
+
+    # for i in range(patch.shape[0]):
+    #     for j in range(patch.shape[1]):
+            print(f"Processing pixel ({j}, {i})")
+            points.append([i, j])
+
+    points_array = np.array(points)
+    Ix_y = numerical_gradient(patch, points_array)
+ 
+    print("Ix_y:")
+    print(Ix_y)
+
+    # Compute elements for matrix A
+    Axx = np.sum(Ix_y[:, 0]**2)
+    Ayy = np.sum(Ix_y[:, 1]**2)
+    Axy = np.sum(Ix_y[:, 0] * Ix_y[:, 1])
+
     # Construct A matrix
     A = np.array([[Axx, Axy], [Axy, Ayy]])
 
@@ -108,6 +118,8 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     print(A)
     print("A determinant:")
     print(np.linalg.det(A))
+    rank = np.linalg.matrix_rank(A)
+    print("Rank of A:", rank)
 
     # Initialize optical flow vector
     u = np.zeros((1,2))
@@ -115,26 +127,55 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     result = np.zeros(search_area.shape, dtype=float)
     delta_u = np.ones((1, 2))
 
-    while np.linalg.norm(delta_u) >= 1e-2:
+    max_iterations = 1000
+    iteration = 0
+    
+    while np.linalg.norm(delta_u) >= 1e-2 and iteration < max_iterations:
 
         b = np.zeros((2,1))
+        print("u")
+        print(u)
+        points_plus_u = []
+        error = []
+        errors = np.zeros((25))
+        for i in range(margin_y, search_area.shape[0] - margin_y):
+            for j in range(margin_x, search_area.shape[1] - margin_x):
+                #print(f"Processing pixel ({i}, {j})")    
+                #Extract patch from search area
+                points_plus_u.append([i + u[0, 1], j + u[0, 0]])
+
+        points_array_plus_u = np.array(points_plus_u)
+        print("points_array_plus_u shape")
+        print(points_array_plus_u.shape)
+
+        original_patch = int_bilineal(patch, points_array)
 
         for i in range(margin_y, search_area.shape[0] - margin_y):
             for j in range(margin_x, search_area.shape[1] - margin_x):
-                print(f"Processing pixel ({i}, {j})")    
-                #Extract patch from search area
                 i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
-                
+                print("i1 shape")
+                print(i1.shape)
+
                 # Step 2: Compute the warped patch I1(xi+u) from u using int_bilinear()
-                warped_patch = int_bilineal(i1, np.array([[i,j]]) + u)
-
+                warped_patch = int_bilineal(i1, points_array_plus_u)
+                
                 #Step 3: Compute error between patches
-                error = warped_patch -  patch[i,j] #not sure about patch indexing here
+                #error = warped_patch -  patch[i,j] #not sure about patch indexing here
+                error = warped_patch - original_patch
+                errors += error
 
-                # Step 4: Compute b from the error between patches and gradients
-                Ix_y = numerical_gradient(patch, np.array([[i, j]]))
-                b[0,:]+= np.dot(error, Ix_y[:, 0])
-                b[1,:]+= np.dot(error, Ix_y[:, 1])     
+        # Step 4: Compute b from the error between patches and gradients
+        print("errors shape")
+        print(errors.shape)
+        print("Ix_y shape")
+        print(Ix_y.shape)
+        b0 = np.sum(np.dot(errors[:], Ix_y[:, 0]))
+        b1 = np.sum(np.dot(errors[:], Ix_y[:, 1]))
+        Axy = np.sum(Ix_y[:, 0] * Ix_y[:, 1])
+
+        # Construct A matrix
+        b[0,:] = b0
+        b[1,:] = b1    
         
         #Solve for uv
         delta_u = np.linalg.solve(A, -b)
