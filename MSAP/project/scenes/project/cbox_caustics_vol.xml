@@ -21,17 +21,17 @@
 	<mesh type="obj">
 		<string name="filename" value="meshes/sphere3.obj"/>
 		<transform name="toWorld">
-			<scale value="5,5,5"/>
-			<rotate axis= "0,1,0" angle="45"/>
+			<scale value="1.5,1.5,1.5"/>
+			<rotate axis= "0,0,0" angle="0"/>
+			<translate value="0.75,0.0, 0.0"/>
 		</transform>
 		<medium type="homogeneous">
 			
 
-
 			<color name="sigmaA" value="0.01 0.01 0.01"/>
-			<color name="sigmaS" value="0.4 0.4 0.4"/>
+			<color name="sigmaS" value="0.02 0.02 0.02"/>
 			<phase type="henyeyGreenstein">
-				<float name="g" value="-0.3"/>
+				<float name="g" value="-0.1"/>
 			</phase>
 		</medium>
 	</mesh>
@@ -58,18 +58,6 @@
 		<bsdf type="diffuse">
 			<color name="albedo" value="0.630 0.065 0.05"/>
 		</bsdf>
-	</mesh>
-
-	<mesh type="obj">
-		<string name="filename" value="meshes/sphere1.obj"/>
-
-		<bsdf type="mirror"/>
-	</mesh>
-
-	<mesh type="obj">
-		<string name="filename" value="meshes/sphere2.obj"/>
-
-		<bsdf type="dielectric"/>
 	</mesh>
 
 	<mesh type="obj">
