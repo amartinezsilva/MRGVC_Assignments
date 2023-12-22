@@ -22,7 +22,7 @@ public:
 		Color3f Lo(0.);
 		Color3f Li_em(0.);
 		Color3f medium_throughput(1.0f, 1.0f, 1.0f);
-		Ray3f pathRay(ray.o, ray.d);
+		//Ray3f pathRay(ray.o, ray.d);
 		MediumSamplingRecord mRec;
 
 		// Find the surface that is visible in the requested direction 
@@ -64,23 +64,100 @@ public:
 
 
 		if(validIntersection && its.mesh->hasMedium() &&
-			its.mesh->getMedium()->sampleDistance(Ray3f(pathRay, 0.0, its.t), mRec, sampler->next2D())){
+			
+			its.mesh->getMedium()->sampleDistance(ray, mRec, sampler->next2D())){
 
 			//const Medium *medium = its.mesh->getMedium();
 			const PhaseFunction *phase = mRec.medium->getPhaseFunction();
 			
-
 			medium_throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;	
 
-			PhaseFunctionQueryRecord pRec(-ray.d, Vector3f(0.0f), ESolidAngle);
+            //validIntersection = scene->rayIntersect(pathRay, its);
 
-			float phaseVal = phase->sample(pRec, sampler->next2D());
+			//Russian Roulette for extinction
+			if (sampler->next1D() > 0.8){
+				return Lo;
+			}
+
+			// //Inscattering
+
+			//Sample emitter
+
+			EmitterQueryRecord emitterRecord(its.p);
+			float pdflight;
+			// Sample random light source
+			const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), pdflight);
+
+			Color3f Le = random_emitter->sample(emitterRecord, sampler->next2D(), 0.);
+
+			// Check if intersected material is emitter
+			if(its.mesh->isEmitter()){
+				emitterRecord.ref = ray.o;
+				emitterRecord.wi = -ray.d;
+				emitterRecord.n = its.shFrame.n;
+				return medium_throughput * its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
+			}
+			
+			// Here perform a visibility query, to check whether the light 
+			// source "em" is visible from the intersection point. 
+			// For that, we create a ray object (shadow ray),
+			// and compute the intersection
+			
+			Ray3f shadow_ray(its.p, emitterRecord.wi);
+			// Ensures that the shadow ray does not overshoot the light source.
+			shadow_ray.maxt = (emitterRecord.p - its.p).norm();
+			Intersection shadowIntersection;
+			if (!scene->rayIntersect(shadow_ray, shadowIntersection)){
+				float pdfpositionlight = random_emitter->pdf(emitterRecord);
+				em_pdf = pdflight * pdfpositionlight;
+				PhaseFunctionQueryRecord pRec(-ray.d,emitterRecord.wi, ESolidAngle); //to_local??
+				float phaseVal = phase->eval(pRec);
+				float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);	
+				mat_pdf = pRec.pdf;
+
+				
+				if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
+				else w_em = em_pdf;
+				
+				Li_em +=  w_em * Le * cos_theta_i / (pdflight*pdfpositionlight);
+			}
+
+			em_pdf = 0.0f, mat_pdf = 0.0f;
+
+			//Sample phase function
+			PhaseFunctionQueryRecord pRec_samp(-ray.d, Vector3f(0.0f), ESolidAngle); //to_local??
+			float phaseVal = phase->sample(pRec_samp, sampler->next2D());
+			mat_pdf = pRec_samp.pdf;
             medium_throughput *= phaseVal;
 
-			Vector3f wo = Frame(-pRec.wi).toWorld(pRec.wo);
-            pathRay = Ray3f(mRec.p, wo);
+			Vector3f wo = Frame(-pRec_samp.wi).toWorld(pRec_samp.wo);
+            Ray3f pathRay = Ray3f(mRec.p, wo);
             pathRay.mint = 0.0f;
-            validIntersection = scene->rayIntersect(pathRay, its);
+
+			Intersection new_its;
+			bool intersection = scene->rayIntersect(pathRay, new_its);
+			Color3f Le_r(0.0f);
+
+			// Conditions
+			if (intersection && new_its.mesh->isEmitter()) {
+				EmitterQueryRecord new_emitterRecord;
+				new_emitterRecord.wi = pathRay.d;
+				new_emitterRecord.n = new_its.shFrame.n;
+				new_emitterRecord.dist = new_its.t;
+				em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
+			}
+
+			if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
+			else w_mat = mat_pdf;
+
+
+			// EMITTER SAMPLING contribution
+			Lo += medium_throughput* Li_em / 0.8;
+
+			// Phase function contribution
+			Lo += medium_throughput * w_mat * Li(scene, sampler, pathRay) / 0.8;
+
+			// // return Li(scene, sampler, pathRay) / 0.8;
 
 
 		} else {
