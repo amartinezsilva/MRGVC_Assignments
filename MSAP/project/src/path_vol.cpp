@@ -30,7 +30,7 @@ public:
 
 		bool validIntersection = scene->rayIntersect(ray, its);
 
-		if (!scene->rayIntersect(ray, its))
+		if (!validIntersection)
 			return scene->getBackground(ray);
 
 
@@ -38,41 +38,13 @@ public:
 		float w_em = 0.0f, w_mat = 0.0f;
 
 
-				// ALREADY INSIDE MEDIUM
-		// std::vector<Medium *> medium = scene->getMedia();
-		// medium[0]->eval(ray, mRec);
-		// PhaseFunctionQueryRecord pRec(-ray.d, Vector3f(0.0f), ESolidAngle);
-		// medium[0]->getPhaseFunction()->sample(pRec, sampler->next2D());
-		// std::string summary = medium[0]->toString();
-		// std::cout << summary << std::endl;
-		// std::cout << "phase function: " << phaseVal;
-		// MediumSamplingRecord mRec;
-		// medium[0]->eval(ray, mRec);
-
-
-				// creo que ahora lo que hay que hacer es quitar esto
-
-		// la idea creo que es, mediante montecarlo cojo un punto de mi rayo. COMO? no se
-		// a toda la L, pase lo que pase le tengo que añadir el transmitance desde la camara ray.mixt hasta ese punto
-		// posteriormente con el inscattering
-		// 		- tengo que añadir el transmitance desde el punto hasta el emitter, con el pdf del emiter
-		// 		- y por otro ladotengo que crear una nueva direccion con wo
-		//			- si es llego a un emmiter devuelvo Lmat, con el transmitance desde el punto hasta el emitter y la phase function the heyseygreeinstein
-		// por otro lado con direct light
-		//      - simplemente transmitance desde el punto de en el que ha chocado con el objeto hasta el no se exactamente donde
-		//      - simplemente transmitance desde el punto de en el que ha chocado con el objeto hasta el emitter
-
-
 		if(validIntersection && its.mesh->hasMedium() &&
 			
 			its.mesh->getMedium()->sampleDistance(ray, mRec, sampler->next2D())){
 
-			//const Medium *medium = its.mesh->getMedium();
 			const PhaseFunction *phase = mRec.medium->getPhaseFunction();
-			
-			medium_throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;	
 
-            //validIntersection = scene->rayIntersect(pathRay, its);
+			medium_throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;	
 
 			//Russian Roulette for extinction
 			if (sampler->next1D() > 0.8){
@@ -119,7 +91,7 @@ public:
 				if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
 				else w_em = em_pdf;
 				
-				Li_em +=  w_em * Le * cos_theta_i / (pdflight*pdfpositionlight);
+				Li_em +=  w_em * Le * cos_theta_i * Color3f(pRec.pdf)/ (pdflight*pdfpositionlight);
 			}
 
 			em_pdf = 0.0f, mat_pdf = 0.0f;
@@ -127,6 +99,7 @@ public:
 			//Sample phase function
 			PhaseFunctionQueryRecord pRec_samp(-ray.d, Vector3f(0.0f), ESolidAngle); //to_local??
 			float phaseVal = phase->sample(pRec_samp, sampler->next2D());
+			Color3f throughput = Color3f(pRec_samp.pdf);
 			mat_pdf = pRec_samp.pdf;
             medium_throughput *= phaseVal;
 
@@ -150,12 +123,11 @@ public:
 			if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
 			else w_mat = mat_pdf;
 
-
 			// EMITTER SAMPLING contribution
 			Lo += medium_throughput* Li_em / 0.8;
 
 			// Phase function contribution
-			Lo += medium_throughput * w_mat * Li(scene, sampler, pathRay) / 0.8;
+			Lo += medium_throughput * w_mat * throughput * Li(scene, sampler, pathRay) / 0.8;
 
 			// // return Li(scene, sampler, pathRay) / 0.8;
 
