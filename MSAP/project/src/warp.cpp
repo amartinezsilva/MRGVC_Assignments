@@ -166,14 +166,14 @@ Vector3f Warp::squareToHenyeyGreenstein(const Point2f &sample, float g) {
     }
     float scale = 1.0f / (2.0f * g);  //negative?
     float fraction = (1.0f - g*g) / (1.0f - g + 2.0f * g * std::max(sample(0), 0.001f));
-    float theta =  scale * (1.0f +  g * g - fraction * fraction);
+    float costheta =  scale * (1.0f +  g * g - fraction * fraction);
 
 
     float phi = 2.0 * M_PI * sample(1);
 
-    float acostheta = acos(theta);
+    float theta = acos(theta);
 
-    return Vector3f(sin(acostheta) * cos(phi), sin(acostheta) * sin(phi), cos(acostheta));
+    return Vector3f(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 }
 
 float Warp::squareToHenyeyGreensteinPDF(const Vector3f &p, float g){
