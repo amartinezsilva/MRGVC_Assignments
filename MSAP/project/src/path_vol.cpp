@@ -46,7 +46,7 @@ public:
 
 			medium_throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;	
 
-			//Russian Roulette for extinction
+			//Russian Roulette
 			if (sampler->next1D() > 0.8){
 				return Lo;
 			}
@@ -82,11 +82,10 @@ public:
 			if (!scene->rayIntersect(shadow_ray, shadowIntersection)){
 				float pdfpositionlight = random_emitter->pdf(emitterRecord);
 				em_pdf = pdflight * pdfpositionlight;
-				PhaseFunctionQueryRecord pRec(-ray.d,emitterRecord.wi, ESolidAngle); //to_local??
+				PhaseFunctionQueryRecord pRec(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), ESolidAngle); //to_local??
 				float phaseVal = phase->eval(pRec);
 				float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);	
 				mat_pdf = pRec.pdf;
-
 				
 				if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
 				else w_em = em_pdf;
@@ -97,7 +96,7 @@ public:
 			em_pdf = 0.0f, mat_pdf = 0.0f;
 
 			//Sample phase function
-			PhaseFunctionQueryRecord pRec_samp(-ray.d, Vector3f(0.0f), ESolidAngle); //to_local??
+			PhaseFunctionQueryRecord pRec_samp(its.toLocal(-ray.d), Vector3f(0.0f), ESolidAngle); //to_local??
 			float phaseVal = phase->sample(pRec_samp, sampler->next2D());
 			Color3f throughput = Color3f(pRec_samp.pdf);
 			mat_pdf = pRec_samp.pdf;
@@ -109,7 +108,6 @@ public:
 
 			Intersection new_its;
 			bool intersection = scene->rayIntersect(pathRay, new_its);
-			Color3f Le_r(0.0f);
 
 			// Conditions
 			if (intersection && new_its.mesh->isEmitter()) {
@@ -129,11 +127,8 @@ public:
 			// Phase function contribution
 			Lo += medium_throughput * w_mat * throughput * Li(scene, sampler, pathRay) / 0.8;
 
-			// // return Li(scene, sampler, pathRay) / 0.8;
-
 
 		} else {
-			//std::cout << "hola3"<< std::endl;
 			if(its.mesh->hasMedium())
                 medium_throughput *= mRec.transmittance / mRec.pdfFailure;
 
@@ -198,8 +193,6 @@ public:
 
 			Intersection new_its;
 			bool intersection = scene->rayIntersect(rayR, new_its);
-			Color3f Le_r(0.0f);
-
 
 			// Conditions
 			if (intersection && new_its.mesh->isEmitter()) {
