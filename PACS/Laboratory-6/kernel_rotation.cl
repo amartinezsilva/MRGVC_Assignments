@@ -1,6 +1,6 @@
 __kernel void image_rotation(
-  __global const uchar *img_input,
-  __global uchar *img_output,
+  __global const uchar4 *img_input,
+  __global uchar4 *img_output,
   const int width,
   const int height,
   const float angle){
