@@ -18,30 +18,51 @@
 		<integer name="sampleCount" value="1024"/>
 	</sampler>
 
-	<mesh type="obj">
+	<!-- Mesh containing medium -->
+	<!-- <mesh type="obj">
 		<string name="filename" value="meshes/sphere3.obj"/>
 		<transform name="toWorld">
-			<scale value="1.5,1.5,1.5"/>
+			<scale value="1,1,1"/>
 			<rotate axis= "0,0,0" angle="0"/>
 			<translate value="0.75,0.0, 0.0"/>
 		</transform>
 		<medium type="homogeneous">
-			
-
-			<color name="sigmaA" value="0.01 0.01 0.01"/>
-			<color name="sigmaS" value="0.02 0.02 0.02"/>
+			<color name="sigmaA" value="1 1 1"/>
+			<color name="sigmaS" value="0.8 0.8 0.8"/>
 			<phase type="henyeyGreenstein">
-				<float name="g" value="-0.1"/>
+				<float name="g" value="0.0"/>
 			</phase>
 		</medium>
-	</mesh>
+	</mesh> -->
+
+	<!-- Medium on the whole scene -->
+	<medium type="homogeneous">
+			<color name="sigmaA" value="0.1 0.1 0.1"/>
+			<color name="sigmaS" value="0.2 0.2 0.2"/>
+			<phase type="henyeyGreenstein">
+				<float name="g" value="0.0"/>
+			</phase>
+	</medium>
 
 	<mesh type="obj">
 		<string name="filename" value="meshes/walls.obj"/>
 
 		<bsdf type="diffuse">
 			<color name="albedo" value="0.725 0.71 0.68"/>
+			<!-- <color name="albedo" value="0.725 0.02 0.28"/> -->
 		</bsdf>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/sphere1.obj"/>
+
+		<bsdf type="mirror"/>
+	</mesh>
+
+	<mesh type="obj">
+		<string name="filename" value="meshes/sphere2.obj"/>
+
+		<bsdf type="dielectric"/>
 	</mesh>
 
 	<mesh type="obj">

@@ -22,6 +22,9 @@ public:
 		Color3f Lo(0.);
 		Color3f Li_em(0.);
 		Color3f medium_throughput(1.0f, 1.0f, 1.0f);
+
+		std::vector<Medium *> medium = scene->getMedia();  //uncomment if the medium is on the whole scene
+
 		//Ray3f pathRay(ray.o, ray.d);
 		MediumSamplingRecord mRec;
 
@@ -38,9 +41,10 @@ public:
 		float w_em = 0.0f, w_mat = 0.0f;
 
 
-		if(validIntersection && its.mesh->hasMedium() &&
+		if(validIntersection &&	
+			//its.mesh->getMedium()->sampleDistance(ray, mRec, sampler->next2D())){   //uncomment if the medium is contained in a mesh
+			medium[0]->sampleDistance(ray, mRec, sampler->next2D())){ //uncomment if the medium is over all the scene
 			
-			its.mesh->getMedium()->sampleDistance(ray, mRec, sampler->next2D())){
 
 			const PhaseFunction *phase = mRec.medium->getPhaseFunction();
 
@@ -129,10 +133,11 @@ public:
 
 
 		} else {
-			if(its.mesh->hasMedium())
-                medium_throughput *= mRec.transmittance / mRec.pdfFailure;
+			// if(its.mesh->hasMedium()){ //uncomment if the medium is on a mesh
+            //     medium_throughput *= mRec.transmittance / mRec.pdfFailure;
+			// }
 
-
+			cout << "Outside medium!" << endl;
 			EmitterQueryRecord emitterRecord(its.p);
 
 			float pdflight;
