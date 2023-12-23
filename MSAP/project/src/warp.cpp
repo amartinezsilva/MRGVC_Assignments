@@ -161,9 +161,11 @@ float Warp::squareToBeckmannPdf(const Vector3f &m, float alpha) {
 Vector3f Warp::squareToHenyeyGreenstein(const Point2f &sample, float g) {
 
     //use the inverse methode
-    if(g == 0.0){
+    if(abs(g) <= Epsilon){
         return Warp::squareToUniformSphere(sample);
+        //return 1.0 - 2*sample(0);
     }
+
     float scale = 1.0f / (2.0f * g);  //negative?
     float fraction = (1.0f - g*g) / (1.0f - g + 2.0f * g * std::max(sample(0), 0.001f));
     float costheta =  scale * (1.0f +  g * g - fraction * fraction);
@@ -171,7 +173,7 @@ Vector3f Warp::squareToHenyeyGreenstein(const Point2f &sample, float g) {
 
     float phi = 2.0 * M_PI * sample(1);
 
-    float theta = acos(theta);
+    float theta = acos(costheta);
 
     return Vector3f(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
 }
