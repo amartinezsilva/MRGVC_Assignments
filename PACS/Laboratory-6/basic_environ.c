@@ -417,7 +417,7 @@ int main(int argc, char** argv)
   // unsigned char* out_images_gpu = new unsigned char[size*images_to_GPU];
   // std::cout << "output data gpu created" << std::endl;
   double kernel_read_bandwidth_time_GPU = 0.0;
-  for (int i = 0; i < images_to_CPU; ++i) {
+  for (int i = 0; i < images_to_GPU; ++i) {
 
     CImg<unsigned char> image_out(image.width(), image.height(), 1, 3);
     //cl_event kernel_read_bandwidth_GPU;
