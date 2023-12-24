@@ -255,6 +255,8 @@ int main(int argc, char** argv)
   // Replicate image data in memory
   size_t total_size = size * total_images;
   cl_char4* all_images_data = new cl_char4[width * height * total_images];
+  //cl_char4* all_images_data = (cl_char4 *) malloc(total_size);
+
 
   for (size_t i = 0; i < total_images; ++i) {
       // Copy image data into the replicated block
@@ -388,6 +390,8 @@ int main(int argc, char** argv)
     err_CPU = clEnqueueReadBuffer(command_queue_CPU, out_device_object_CPU, CL_TRUE, i * data_transfer_size,
                                   data_transfer_size, &image_out_CPU_all(i * width * height), 0, NULL, &kernel_read_bandwidth_CPU);
     cl_error(err_CPU, "Failed to enqueue a read command for CPU\n");
+    if (i == 4) image_out_CPU_all(i*width*height).display("Image rotation");
+
   }
 
   clWaitForEvents(images_to_CPU, &kernel_read_bandwidth_CPU);
@@ -499,7 +503,11 @@ int main(int argc, char** argv)
   timer = clock() - timer;
   printf("Execution time of the program in seconds: %f s\n", ((float)timer)/CLOCKS_PER_SEC);
   
-  delete[] all_images_data;
+  //delete[] all_images_data;
+  free(all_images_data);
+  // free(image_data_for_CPU);
+  // free(image_data_for_GPU);
+
   return 0;
 }
 

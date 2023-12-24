@@ -248,9 +248,9 @@ int main(int argc, char** argv)
 
   // 9. Launch Kernel
 
-  const size_t global_size[3] = {image.width() , image.height(), image.spectrum()};
+  const size_t global_size[2] = {image.width() , image.height()};
 
-  err = clEnqueueNDRangeKernel(command_queue, kernel, 3, NULL, global_size, NULL, 0, NULL, &kernel_time);
+  err = clEnqueueNDRangeKernel(command_queue, kernel, 2, NULL, global_size, NULL, 0, NULL, &kernel_time);
   cl_error(err, "Failed to launch kernel to the device\n");
 
   // After the kernel execution
@@ -295,7 +295,7 @@ int main(int argc, char** argv)
 
   // 11. Check correctness of execution
   // Display the image
-  // image_out.display("Image rotation");
+  image_out.display("Image rotation");
   
   // 12. Release OpenCL memory allocated along program
   clReleaseMemObject(in_device_object);
