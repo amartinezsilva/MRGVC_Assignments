@@ -78,7 +78,9 @@ def seed_estimation_NCC_single_point(img1_gray, img2_gray, i_img, j_img, patch_h
     return i_flow, j_flow
 
 
-def lucas_kanade(patch: np.array, search_area: np.array, patch_Ix: np.array, patch_Iy: np.array) -> np.array:
+def lucas_kanade(patch: np.array, search_area: np.array, 
+                 patch_Ix: np.array, patch_Iy: np.array, 
+                 search_area_Ix: np.array, search_area_Iy: np.array) -> np.array:
     """
     Lucas Kanade m for a patch in a searching area.
     """
@@ -103,29 +105,43 @@ def lucas_kanade(patch: np.array, search_area: np.array, patch_Ix: np.array, pat
     u = np.zeros((1,2))
     
     result = np.zeros(search_area.shape, dtype=float)
-    delta_u = np.ones((1, 2))
+    delta_u = np.ones((1,2))
 
-    max_iterations = 100000
+    max_iterations = 10000
     iteration = 0
     
     while np.linalg.norm(delta_u) >= 1e-3 and iteration < max_iterations:
 
         b = np.zeros((2,1))
 
+        # ########## With loop ############
         for i in range(margin_y, search_area.shape[0] - margin_y):
             for j in range(margin_x, search_area.shape[1] - margin_x):
                 i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
                 x_i = np.array([i + u[0, 1], j + u[0, 0]]).reshape((2,1))   
-                map_x = x_i[0,:].astype(np.float32)
-                map_y = x_i[1,:].astype(np.float32)
+                map_x = x_i[1,:].astype(np.float32)
+                map_y = x_i[0,:].astype(np.float32)
                 # Step 2: Compute the warped patch I1(xi+u) from u using int_bilinear()
                 warped_patch = cv.remap(i1, map_x, map_y, cv.INTER_LINEAR)
+                original_patch = cv.remap(patch, map_x, map_y, cv.INTER_LINEAR)
                 #Step 3: Compute error between patches
                 #error = warped_patch -  patch[i,j] #not sure about patch indexing here
-                error = (warped_patch - patch[i,j]).flatten()
+                error = (warped_patch - original_patch).flatten()
                 # Compute b from the error between patches and gradients
                 b[0, :] += error * patch_Ix[i,j]
                 b[1, :] += error * patch_Iy[i,j]
+        
+        # ########## ############## ############
+
+        ######## Without loop ########
+        # map_x = u[0, 0] + np.arange(patch.shape[1]).astype(np.float32)
+        # map_y = u[0, 1] + np.arange(patch.shape[0]).astype(np.float32)
+        # warped_patch = cv.remap(search_area, map_x, map_y, cv.INTER_LINEAR)
+        # original_patch = cv.remap(patch, map_x, map_y, cv.INTER_LINEAR)
+        # error = warped_patch - original_patch
+        # b[0, :] = np.sum(error * patch_Ix)
+        # b[1, :] = np.sum(error * patch_Iy)
+        ######## ########
 
         # Solve for delta_u
         delta_u = np.linalg.solve(A, -b)
@@ -135,12 +151,13 @@ def lucas_kanade(patch: np.array, search_area: np.array, patch_Ix: np.array, pat
 
         iteration += 1
         
-        if iteration % 10 == 0:
+        if iteration % 100 == 0:
             print(f"Iteration:{iteration} - Error: {np.linalg.norm(delta_u)}, DeltaU: {delta_u}, U: {u}")
 
     print("Converged!")
+
+    ##### With loop #######
     # Calculate the result with the final value of u
-     #Calculate the result with final value of u
     for i in range(margin_y, search_area.shape[0] - margin_y):
         for j in range(margin_x, search_area.shape[1] - margin_x):
             i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
@@ -148,7 +165,17 @@ def lucas_kanade(patch: np.array, search_area: np.array, patch_Ix: np.array, pat
             map_x = x_i[1,:].astype(np.float32)
             map_y = x_i[0,:].astype(np.float32)
             # Step 2: Compute the warped patch I1(xi+u) from u using int_bilinear()
-            result[i,j] = cv.remap(i1, map_x, map_y, cv.INTER_LINEAR)
+            result[i,j] = cv.remap(search_area, map_x, map_y, cv.INTER_LINEAR)
+            #result[i,j] = cv.remap(patch, map_x, map_y, cv.INTER_LINEAR)
+
+
+    ########## ############## ############
+
+    ######## Without loop ########
+    # map_x = u[0, 0] + np.arange(patch.shape[1]).astype(np.float32)
+    # map_y = u[0, 1] + np.arange(patch.shape[0]).astype(np.float32)
+    # result = cv.remap(patch, map_x, map_y, cv.INTER_LINEAR)
+    #######################################
 
     return result
         
@@ -177,7 +204,7 @@ def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, patc
     print("Patch shape: " + str(patch.shape))
     print("Search area shape: " + str(search_area.shape))
 
-    result = lucas_kanade(patch, search_area, patch_Ix, patch_Iy)
+    result = lucas_kanade(patch, search_area, patch_Ix, patch_Iy, search_area_Ix, search_area_Iy)
 
     iMax, jMax = np.where(result == np.amax(result))
 
