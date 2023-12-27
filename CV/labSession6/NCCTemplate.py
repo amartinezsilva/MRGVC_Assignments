@@ -85,31 +85,13 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     margin_y = int(patch.shape[0]/2)
     margin_x = int(patch.shape[1]/2)
 
-    Axx = 0
-    Axy = 0
-    Ayy = 0
+    # Compute gradients using OpenCV
+    Ix = cv.Sobel(patch, cv.CV_64F, 1, 0, ksize=3)
+    Iy = cv.Sobel(patch, cv.CV_64F, 0, 1, ksize=3)
 
-    points = []
-    #Compute gradients
-
-    for i in range(margin_y, search_area.shape[0] - margin_y):
-        for j in range(margin_x, search_area.shape[1] - margin_x):
-
-    # for i in range(patch.shape[0]):
-    #     for j in range(patch.shape[1]):
-            print(f"Processing pixel ({j}, {i})")
-            points.append([i, j])
-
-    points_array = np.array(points)
-    Ix_y = numerical_gradient(patch, points_array)
- 
-    print("Ix_y:")
-    print(Ix_y)
-
-    # Compute elements for matrix A
-    Axx = np.sum(Ix_y[:, 0]**2)
-    Ayy = np.sum(Ix_y[:, 1]**2)
-    Axy = np.sum(Ix_y[:, 0] * Ix_y[:, 1])
+    Axx = np.sum(Ix**2)
+    Ayy = np.sum(Iy**2)
+    Axy = np.sum(Ix * Iy)
 
     # Construct A matrix
     A = np.array([[Axx, Axy], [Axy, Ayy]])
@@ -127,69 +109,50 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     result = np.zeros(search_area.shape, dtype=float)
     delta_u = np.ones((1, 2))
 
-    max_iterations = 1000
+    max_iterations = 10000
     iteration = 0
     
-    while np.linalg.norm(delta_u) >= 1e-2 and iteration < max_iterations:
+    while np.linalg.norm(delta_u) >= 1e-3 and iteration < max_iterations:
 
         b = np.zeros((2,1))
-        print("u")
-        print(u)
-        points_plus_u = []
-        error = []
-        errors = np.zeros((25))
-        for i in range(margin_y, search_area.shape[0] - margin_y):
-            for j in range(margin_x, search_area.shape[1] - margin_x):
-                #print(f"Processing pixel ({i}, {j})")    
-                #Extract patch from search area
-                points_plus_u.append([i + u[0, 1], j + u[0, 0]])
-
-        points_array_plus_u = np.array(points_plus_u)
-        print("points_array_plus_u shape")
-        print(points_array_plus_u.shape)
-
-        original_patch = int_bilineal(patch, points_array)
 
         for i in range(margin_y, search_area.shape[0] - margin_y):
             for j in range(margin_x, search_area.shape[1] - margin_x):
                 i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
-                print("i1 shape")
-                print(i1.shape)
-
+                x_i = np.array([i + u[0, 1], j + u[0, 0]]).reshape((2,1))   
+                map_x = x_i[0,:].astype(np.float32)
+                map_y = x_i[1,:].astype(np.float32)
                 # Step 2: Compute the warped patch I1(xi+u) from u using int_bilinear()
-                warped_patch = int_bilineal(i1, points_array_plus_u)
-                
+                warped_patch = cv.remap(i1, map_x, map_y, cv.INTER_LINEAR)
                 #Step 3: Compute error between patches
                 #error = warped_patch -  patch[i,j] #not sure about patch indexing here
-                error = warped_patch - original_patch
-                errors += error
+                error = (warped_patch - patch[i,j]).flatten()
+                # Compute b from the error between patches and gradients
+                b[0, :] += error * Ix[i,j]
+                b[1, :] += error * Iy[i,j]
 
-        # Step 4: Compute b from the error between patches and gradients
-        print("errors shape")
-        print(errors.shape)
-        print("Ix_y shape")
-        print(Ix_y.shape)
-        b0 = np.sum(np.dot(errors[:], Ix_y[:, 0]))
-        b1 = np.sum(np.dot(errors[:], Ix_y[:, 1]))
-        Axy = np.sum(Ix_y[:, 0] * Ix_y[:, 1])
-
-        # Construct A matrix
-        b[0,:] = b0
-        b[1,:] = b1    
-        
-        #Solve for uv
+        # Solve for delta_u
         delta_u = np.linalg.solve(A, -b)
+
         # Accumulate optical flow vector
         u += delta_u.T
 
-        print(f"Iteration - Error: {np.linalg.norm(delta_u)}, DeltaU: {delta_u}")
+        iteration += 1
+        
+        if iteration % 10 == 0:
+            print(f"Iteration:{iteration} - Error: {np.linalg.norm(delta_u)}, DeltaU: {delta_u}")
 
     print("Converged!")
-    #Calculate the result with final value of u
+    # Calculate the result with the final value of u
+     #Calculate the result with final value of u
     for i in range(margin_y, search_area.shape[0] - margin_y):
         for j in range(margin_x, search_area.shape[1] - margin_x):
             i1 = search_area[i-margin_x:i + margin_x + 1, j-margin_y:j + margin_y + 1]
-            result[i,j] = int_bilineal(i1, np.array([[i,j]]) + u)
+            x_i = np.array([i + u[0, 1], j + u[0, 0]]).reshape((2,1))   
+            map_x = x_i[1,:].astype(np.float32)
+            map_y = x_i[0,:].astype(np.float32)
+            # Step 2: Compute the warped patch I1(xi+u) from u using int_bilinear()
+            result[i,j] = cv.remap(i1, map_x, map_y, cv.INTER_LINEAR)
 
     return result
         
