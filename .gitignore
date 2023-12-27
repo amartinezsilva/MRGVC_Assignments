@@ -5,6 +5,6 @@ PACS/P1/eigen-3.4.0/
 *.pyc
 *.zip
 MSAP/build
-MSAP/Nori2
 CV/LabSession3/SuperGluePretrainedNetwork
 PACS/Laboratory-5/CImg/*
+MSAP/Nori2/*
