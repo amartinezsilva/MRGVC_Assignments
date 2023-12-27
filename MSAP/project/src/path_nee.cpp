@@ -10,7 +10,7 @@ NORI_NAMESPACE_BEGIN
 
 class PathTracingNEE: public Integrator {
 private:
-
+	const double P_NO_ABSORTION = 0.95;
 public:
 	PathTracingNEE(const PropertyList& props) {
 		/* No parameters this time */
@@ -61,7 +61,7 @@ public:
 			BSDFQueryRecord bsdfRecord_ems(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
         	Color3f fr = its.mesh->getBSDF()->eval(bsdfRecord_ems);
         	float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);
-			Le_acc += Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
+			Le_acc += Le * fr * cos_theta_i / (pdflight);
 		}
 
 		///////////////////
@@ -93,19 +93,19 @@ public:
 
 		if (bsdfRecord_bsdf.measure == EDiscrete) {
 			// BSDF contribution
-			return throughput * Li(scene, sampler, rayR) / 0.8;
+			return throughput * Li(scene, sampler, rayR) / P_NO_ABSORTION;
 		}
 
 		if (intersection && new_its.mesh->isEmitter()) {
 			// EMITTER SAMPLING contribution
-			return Le_acc / 0.8;
+			return Le_acc / P_NO_ABSORTION;
 		}
 
 		// EMITTER SAMPLING contribution
-		Lo += Le_acc / 0.8;
+		Lo += Le_acc / P_NO_ABSORTION;
 
 		// BSDF contribution
-		Lo += throughput * Li(scene, sampler, rayR) / 0.8;
+		Lo += throughput * Li(scene, sampler, rayR) / P_NO_ABSORTION;
 	
 
 		return Lo;

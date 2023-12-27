@@ -10,6 +10,7 @@ NORI_NAMESPACE_BEGIN
 
 class PathTracingMIS: public Integrator {
 private:
+	const double P_NO_ABSORTION = 0.95;
 
 public:
 	PathTracingMIS(const PropertyList& props) {
@@ -22,8 +23,10 @@ public:
 
 		// Find the surface that is visible in the requested direction 
 		Intersection its;
-		if (!scene->rayIntersect(ray, its))
+		if (!scene->rayIntersect(ray, its)) {
+			//pdf_em_back = scene->getPdfBackground(ray);
 			return scene->getBackground(ray);
+		}
 
 		float em_pdf = 0.0f, mat_pdf = 0.0f;
 		float w_em = 0.0f, w_mat = 0.0f;
@@ -41,11 +44,14 @@ public:
 			emitterRecord.ref = ray.o;
 			emitterRecord.wi = -ray.d;
 			emitterRecord.n = its.shFrame.n;
+			//pdf_em_back = its.mesh->getEmitter()->pdf(emitterRecord);
 			return its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
 		}
 
+		//pdf_em_back = 0;
+
 		//Russian Roulette
-		if (sampler->next1D() > 0.8){
+		if (sampler->next1D() > P_NO_ABSORTION){
 			return Lo;
 		}
 		
@@ -70,7 +76,7 @@ public:
 			if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
 			else w_em = em_pdf;
 			
-			Li_em += w_em * Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
+			Li_em += w_em * Le * fr * cos_theta_i / (pdflight);
 		}
 
 		em_pdf = 0.0f, mat_pdf = 0.0f;
@@ -97,25 +103,26 @@ public:
 			new_emitterRecord.wi = rayR.d;
 			new_emitterRecord.n = new_its.shFrame.n;
 			new_emitterRecord.dist = new_its.t;
-			em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
+			em_pdf = pdflight * new_its.mesh->getEmitter()->pdf(new_emitterRecord);
 		}
 
 		if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
 		else w_mat = mat_pdf;
 
+		float pdf_em_bsdfDir = 0;
 		if (bsdfRecord_samp.measure == EDiscrete) {
 			// BSDF contribution
-			//return Li_em / 0.8;
+			//return Li_em / P_NO_ABSORTION;
 			w_mat = 1.0 / (1.0 + em_pdf);
-			return w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
-		}
+			return w_mat * throughput * Li(scene, sampler, rayR) / P_NO_ABSORTION;
+		} 
 
 
 		// EMITTER SAMPLING contribution
-		Lo += Li_em / 0.8;
+		Lo += Li_em / P_NO_ABSORTION;
 
 		// BSDF contribution
-		Lo += w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
+		Lo += w_mat * throughput * Li(scene, sampler, rayR) / P_NO_ABSORTION;
 
 		return Lo;
 	}
