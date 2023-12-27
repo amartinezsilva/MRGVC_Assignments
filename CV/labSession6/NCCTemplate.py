@@ -80,10 +80,12 @@ def seed_estimation_NCC_single_point(img1_gray, img2_gray, i_img, j_img, patch_h
 
 def lucas_kanade(patch: np.array, search_area: np.array, 
                  patch_Ix: np.array, patch_Iy: np.array, 
-                 search_area_Ix: np.array, search_area_Iy: np.array) -> np.array:
+                 search_area_Ix: np.array, search_area_Iy: np.array,
+                 initial_guess: np.array = None) -> np.array:
     """
     Lucas Kanade m for a patch in a searching area.
     """
+
     margin_y = int(patch.shape[0]/2)
     margin_x = int(patch.shape[1]/2)
 
@@ -101,8 +103,11 @@ def lucas_kanade(patch: np.array, search_area: np.array,
     # rank = np.linalg.matrix_rank(A)
     # print("Rank of A:", rank)
 
-    # Initialize optical flow vector
-    u = np.zeros((1,2))
+    # Initialize optical flow vector using the initial guess if available
+    if initial_guess is not None: 
+        u = initial_guess.reshape((1, 2)) 
+        #print(f"Initial guess: {u}")
+    else: u = np.zeros((1, 2))
     
     result = np.zeros(search_area.shape, dtype=float)
     delta_u = np.ones((1,2))
@@ -160,7 +165,9 @@ def lucas_kanade(patch: np.array, search_area: np.array,
 
     return result
         
-def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, patch_half_size: int = 5, searching_area_size: int = 100):
+def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, 
+                                        patch_half_size: int = 5, searching_area_size: int = 100,
+                                        initial_guess: np.array = None):
     
     # Attention!! we are not checking the padding
     patch = img1_gray[i_img - patch_half_size:i_img + patch_half_size + 1, j_img - patch_half_size:j_img + patch_half_size + 1]
@@ -185,7 +192,7 @@ def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, patc
     # print("Patch shape: " + str(patch.shape))
     # print("Search area shape: " + str(search_area.shape))
 
-    result = lucas_kanade(patch, search_area, patch_Ix, patch_Iy, search_area_Ix, search_area_Iy)
+    result = lucas_kanade(patch, search_area, patch_Ix, patch_Iy, search_area_Ix, search_area_Iy, initial_guess)
 
     iMax, jMax = np.where(result == np.amax(result))
 
@@ -219,12 +226,14 @@ if __name__ == '__main__':
 
     #### Lucas - Kanade #####
 
-    template_size_half = 5
-    searching_area_size: int = 15
     print("Lucas-Kanade method")
-    seed_optical_flow_sparse = np.zeros((points_selected.shape))
+    #seed_optical_flow_sparse = np.zeros((points_selected.shape))
     for k in range(0,points_selected.shape[0]):
-        i_flow, j_flow = seed_estimation_kanade_single_point(img1_gray, img2_gray, points_selected[k,1], points_selected[k,0], template_size_half, searching_area_size)
+        print(f"Processing point {k}: [{points_selected[k,1]}, {points_selected[k,0]}]")
+        i_flow, j_flow = seed_estimation_kanade_single_point(img1_gray, img2_gray, points_selected[k,1], points_selected[k,0], 
+                                                             template_size_half, searching_area_size,
+                                                             initial_guess=None) #initial_guess=seed_optical_flow_sparse[k,:]
+                                                             #initial_guess=seed_optical_flow_sparse[k,:]) #initial_guess=seed_optical_flow_sparse[k,:]
         seed_optical_flow_sparse[k,:] = np.hstack((j_flow,i_flow))
 
     print(seed_optical_flow_sparse)
