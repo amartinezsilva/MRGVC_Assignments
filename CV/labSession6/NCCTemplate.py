@@ -78,20 +78,16 @@ def seed_estimation_NCC_single_point(img1_gray, img2_gray, i_img, j_img, patch_h
     return i_flow, j_flow
 
 
-def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
+def lucas_kanade(patch: np.array, search_area: np.array, patch_Ix: np.array, patch_Iy: np.array) -> np.array:
     """
     Lucas Kanade m for a patch in a searching area.
     """
     margin_y = int(patch.shape[0]/2)
     margin_x = int(patch.shape[1]/2)
 
-    # Compute gradients using OpenCV
-    Ix = cv.Sobel(patch, cv.CV_64F, 1, 0, ksize=3)
-    Iy = cv.Sobel(patch, cv.CV_64F, 0, 1, ksize=3)
-
-    Axx = np.sum(Ix**2)
-    Ayy = np.sum(Iy**2)
-    Axy = np.sum(Ix * Iy)
+    Axx = np.sum(patch_Ix**2)
+    Ayy = np.sum(patch_Iy**2)
+    Axy = np.sum(patch_Ix * patch_Iy)
 
     # Construct A matrix
     A = np.array([[Axx, Axy], [Axy, Ayy]])
@@ -109,7 +105,7 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
     result = np.zeros(search_area.shape, dtype=float)
     delta_u = np.ones((1, 2))
 
-    max_iterations = 10000
+    max_iterations = 100000
     iteration = 0
     
     while np.linalg.norm(delta_u) >= 1e-3 and iteration < max_iterations:
@@ -128,8 +124,8 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
                 #error = warped_patch -  patch[i,j] #not sure about patch indexing here
                 error = (warped_patch - patch[i,j]).flatten()
                 # Compute b from the error between patches and gradients
-                b[0, :] += error * Ix[i,j]
-                b[1, :] += error * Iy[i,j]
+                b[0, :] += error * patch_Ix[i,j]
+                b[1, :] += error * patch_Iy[i,j]
 
         # Solve for delta_u
         delta_u = np.linalg.solve(A, -b)
@@ -140,7 +136,7 @@ def lucas_kanade(patch: np.array, search_area: np.array) -> np.array:
         iteration += 1
         
         if iteration % 10 == 0:
-            print(f"Iteration:{iteration} - Error: {np.linalg.norm(delta_u)}, DeltaU: {delta_u}")
+            print(f"Iteration:{iteration} - Error: {np.linalg.norm(delta_u)}, DeltaU: {delta_u}, U: {u}")
 
     print("Converged!")
     # Calculate the result with the final value of u
@@ -160,18 +156,28 @@ def seed_estimation_kanade_single_point(img1_gray, img2_gray, i_img, j_img, patc
     
     # Attention!! we are not checking the padding
     patch = img1_gray[i_img - patch_half_size:i_img + patch_half_size + 1, j_img - patch_half_size:j_img + patch_half_size + 1]
-    
+
+    # Compute gradients using OpenCV
+    Ix = cv.Sobel(img1_gray, cv.CV_64F, 1, 0, ksize=3)
+    Iy = cv.Sobel(img1_gray, cv.CV_64F, 0, 1, ksize=3)
+
+    #Cut the gradient around the patch
+    patch_Ix = Ix[i_img - patch_half_size:i_img + patch_half_size + 1, j_img - patch_half_size:j_img + patch_half_size + 1]
+    patch_Iy = Iy[i_img - patch_half_size:i_img + patch_half_size + 1, j_img - patch_half_size:j_img + patch_half_size + 1]
+
     i_ini_sa = i_img - int(searching_area_size / 2)
     i_end_sa = i_img + int(searching_area_size / 2) + 1
     j_ini_sa = j_img - int(searching_area_size / 2)
     j_end_sa = j_img + int(searching_area_size / 2) + 1
 
     search_area = img2_gray[i_ini_sa:i_end_sa, j_ini_sa:j_end_sa]
+    search_area_Ix = Ix[i_ini_sa:i_end_sa, j_ini_sa:j_end_sa]
+    search_area_Iy = Iy[i_ini_sa:i_end_sa, j_ini_sa:j_end_sa]
 
     print("Patch shape: " + str(patch.shape))
     print("Search area shape: " + str(search_area.shape))
 
-    result = lucas_kanade(patch, search_area)
+    result = lucas_kanade(patch, search_area, patch_Ix, patch_Iy)
 
     iMax, jMax = np.where(result == np.amax(result))
 
