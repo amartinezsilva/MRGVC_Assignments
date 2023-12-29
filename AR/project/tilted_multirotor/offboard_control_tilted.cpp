@@ -65,10 +65,10 @@ using namespace px4_msgs::msg;
 
 class OffboardControl : public rclcpp::Node {
 
-	float minimum_distance = 0.25;
-	float minimum_angle = 6.5;
-	std::vector<std::vector<float>> Goal;
-	std::vector<std::vector<float>> targets;
+	float min_interp_distance_ = 0.1;
+	float minimum_distance_ = 0.25;
+	std::vector<std::vector<double>> Goal_;
+	std::vector<std::vector<double>> targets_;
 	std::ifstream inFile;
 	int currentTarget = 0; //index with the next target to reach
 
@@ -105,13 +105,11 @@ public:
 		odometry_sub_ = 
 			this->create_subscription<px4_msgs::msg::VehicleOdometry>("/fmu/vehicle_odometry/out", 10,
 				[this](const px4_msgs::msg::VehicleOdometry::UniquePtr msg) {
-					std::cout << "\n\n\n\n\n\n\n\n\n\n";
-					std::cout << "RECEIVED ODOMETRY DATA"   << std::endl;
-					std::cout << "=================================="   << std::endl;
-					std::cout << "ts: "      << msg->timestamp    << std::endl;
-					std::cout << "x: " << msg->x  << std::endl;
-					std::cout << "y: " << msg->y << std::endl;
-					std::cout << "z: " << msg->z  << std::endl;
+					// std::cout << "\n\n\n\n\n\n\n\n\n\n";
+					// std::cout << "RECEIVED ODOMETRY DATA"   << std::endl;
+					// std::cout << "=================================="   << std::endl;
+					// std::cout << "ts: "      << msg->timestamp    << std::endl;
+					std::cout << "x: " << msg->x << "y: " << msg->y << "z: " << msg->z  << std::endl;
 					// std::cout << "q1: " << msg->q[0]  << std::endl;
 					// std::cout << "q2: " << msg->q[1] << std::endl;
 					// std::cout << "q3: " << msg->q[2]  << std::endl;
@@ -128,47 +126,40 @@ public:
 					pitch_degrees = radiansToDegrees(pitch);
 					yaw_degrees = radiansToDegrees(yaw);
 
-					std::cout << "roll(º): " << roll_degrees  << std::endl;
-					std::cout << "pitch(º): " << pitch_degrees << std::endl;
-					std::cout << "yaw(º): " << yaw_degrees  << std::endl;
+					std::cout << "roll(º): " << roll_degrees
+					<< "pitch(º): " << pitch_degrees
+					<< "yaw(º): " << yaw_degrees  << std::endl;
+
+					std::cout << "Roll desired: " << Goal_[1][0] << " degrees, "
+					<< "Pitch desired: " << Goal_[1][1] << " degrees, "
+					<< "Yaw desired:" << Goal_[1][2] << " degrees" << std::endl;
 
 					//Update control
 
-					float ex = Goal[0][0] - msg->x;
-					float ey = Goal[0][1] - msg->y;
-					float ez = Goal[0][2] - msg->z;
+					float ex = Goal_[0][0] - msg->x;
+					float ey = Goal_[0][1] - msg->y;
+					float ez = Goal_[0][2] - msg->z;
 
 					float distance_to_target = sqrt(ex*ex + ey*ey + ez*ez);
 
-					float eRoll = roll_degrees - Goal[1][0];
-					float ePitch = pitch_degrees - Goal[1][1];
-					float eYaw = yaw_degrees - Goal[1][2];
-
-					float angle_to_target = sqrt(eRoll*eRoll+ePitch*ePitch+eYaw*eYaw);
-					
-					std::cout << "Roll desired: " << Goal[1][0] << " degrees, "
-					<< "Pitch desired: " << Goal[1][1] << " degrees, "
-					<< "Yaw desired:" << Goal[1][2] << " degrees" << std::endl;
-
 					std::cout << "distance to target: " << distance_to_target << std::endl;
-					std::cout << "angle to target: " << angle_to_target << std::endl;
 
-					if(distance_to_target < minimum_distance && (angle_to_target < minimum_angle || (360 - angle_to_target) < minimum_angle)) {
-						if (currentTarget == targets.size() - 1){
+					if(distance_to_target < minimum_distance_) {
+						if (currentTarget == targets_.size() - 1){
 							printf("Final goal reached!");
 							return;
 						}
 
 						currentTarget++;
 
-						std::vector<float> target = targets.at(currentTarget);
+						std::vector<double> target = targets_.at(currentTarget);
 
-						Goal[0][0] = target.at(0);
-						Goal[0][1] = target.at(1);
-						Goal[0][2] = target.at(2);
-						Goal[1][0] = target.at(3);
-						Goal[1][1] = target.at(4);
-						Goal[1][2] = target.at(5);
+						Goal_[0][0] = target.at(0);
+						Goal_[0][1] = target.at(1);
+						Goal_[0][2] = target.at(2);
+						Goal_[1][0] = target.at(3);
+						Goal_[1][1] = target.at(4);
+						Goal_[1][2] = target.at(5);
 
 					}
 
@@ -186,11 +177,12 @@ public:
         std::cout << "Path: " << pkg_path + "/src/" + targets_file_param + ".txt" << '\n';
 
 		std::string target_string;
+		std::vector<double> list_x, list_y, list_z, list_r, list_p, list_yaw;
 		if ( inFile.is_open() ) {
 			while ( std::getline (inFile, target_string) ) { // equivalent to myfile.good()
 				std::cout << "Read point: " << target_string << '\n';
 
-				std::vector<float> target;
+				std::vector<double> target;
 
 				std::istringstream ss(target_string);
 				std::string token;
@@ -199,7 +191,14 @@ public:
                     target.push_back(std::atof(token.c_str()));
 				}
 
-				targets.push_back(target);
+				list_x.push_back(target.at(0));
+				list_y.push_back(target.at(1));
+				list_z.push_back(target.at(2));
+				list_r.push_back(target.at(3));
+				list_p.push_back(target.at(4));
+				list_yaw.push_back(target.at(5));
+
+				//targets_.push_back(target);
 				
 			}
 			
@@ -209,16 +208,62 @@ public:
 		else {
 			std::cout << "Couldn't open file\n";
 		}
-        
-        std::vector<float> first_target = targets.front();
-        Goal.resize(2, std::vector<float>(3, 0.0));
 
-        Goal[0][0] = first_target.at(0);
-        Goal[0][1] = first_target.at(1);
-        Goal[0][2] = first_target.at(2);
-        Goal[1][0] = first_target.at(3);
-        Goal[1][1] = first_target.at(4);
-        Goal[1][2] = first_target.at(5);
+
+		//Perform interpolation
+		int new_path_size = 1000;
+		std::cout << "Requesting interpolation of: " << new_path_size << "waypoints" << std::endl;
+
+		std::vector<double> x_interp =  interpWaypointList(list_x, new_path_size);
+		std::vector<double> y_interp =  interpWaypointList(list_y, new_path_size);
+		std::vector<double> z_interp =  interpWaypointList(list_z, new_path_size);
+		std::vector<double> r_interp =  interpWaypointList(list_r, new_path_size);
+		std::vector<double> p_interp =  interpWaypointList(list_p, new_path_size);
+		std::vector<double> yaw_interp =  interpWaypointList(list_y, new_path_size);
+
+		//DEBUG: write interpolated trajectory to a .txt
+		// Open the file for writing
+		// Specify the filename
+    	std::string output_filename = "interpolated_trajectory.txt";
+		std::ofstream outputFile(output_filename);
+
+		// Check if the file is open
+		if (!outputFile.is_open()) {
+			std::cerr << "Error opening the file: " << output_filename << std::endl;
+			return;
+		}
+
+		// Write the vectors to the file
+		for (size_t i = 0; i < x_interp.size(); ++i) {
+			outputFile << x_interp[i] << "\t" << y_interp[i] << "\t" << z_interp[i] << "\t"
+					<< r_interp[i] << "\t" << p_interp[i] << "\t" << yaw_interp[i] << std::endl;
+
+			std::vector<double> target;
+			target.push_back(x_interp[i]);
+			target.push_back(y_interp[i]);
+			target.push_back(z_interp[i]);
+			target.push_back(r_interp[i]);
+			target.push_back(p_interp[i]);
+			target.push_back(yaw_interp[i]);
+			targets_.push_back(target);
+
+		}
+
+		// Close the file
+		outputFile.close();
+
+		std::cout << "Interpolated trajectory wrote to " << output_filename << std::endl;
+
+        
+        std::vector<double> first_target = targets_.front();
+        Goal_.resize(2, std::vector<double>(3, 0.0));
+
+        Goal_[0][0] = first_target.at(0);
+        Goal_[0][1] = first_target.at(1);
+        Goal_[0][2] = first_target.at(2);
+        Goal_[1][0] = first_target.at(3);
+        Goal_[1][1] = first_target.at(4);
+        Goal_[1][2] = first_target.at(5);
 
 
 		offboard_setpoint_counter_ = 0;
@@ -276,6 +321,10 @@ private:
     void eulerAnglesToQuaternion(float roll, float pitch, float yaw, float q[4]) const;
     float degreesToRadians(const float degrees) const;
     float radiansToDegrees(const float radians) const;
+	// interpolation functions
+	int nearestNeighbourIndex(std::vector<double> &_x, double &_value) const;
+	std::vector<double> linealInterp1(std::vector<double> &_x, std::vector<double> &_y, std::vector<double> &_x_new) const;
+	std::vector<double> interpWaypointList(std::vector<double> &_list_pose_axis, int _amount_of_points) const;
 };
 
 /**
@@ -321,10 +370,10 @@ void OffboardControl::publish_offboard_control_mode() const {
 void OffboardControl::publish_trajectory_setpoint() const {
 	TrajectorySetpoint msg{};
 	msg.timestamp = timestamp_.load();
-	msg.x = Goal[0][0];
-	msg.y = Goal[0][1];
-	msg.z = Goal[0][2];
-	msg.yaw = degreesToRadians(Goal[1][2]); // [-PI:PI]
+	msg.x = Goal_[0][0];
+	msg.y = Goal_[0][1];
+	msg.z = Goal_[0][2];
+	msg.yaw = degreesToRadians(Goal_[1][2]); // [-PI:PI]
 
 	trajectory_setpoint_publisher_->publish(msg);
 }
@@ -338,8 +387,8 @@ void OffboardControl::publish_tilt_setpoint() const {
 	TiltingMcDesiredAngles msg{};
 	msg.timestamp = timestamp_.load();
 
-	msg.roll_body = degreesToRadians(Goal[1][0]);
-	msg.pitch_body = degreesToRadians(Goal[1][1]);
+	msg.roll_body = degreesToRadians(Goal_[1][0]);
+	msg.pitch_body = degreesToRadians(Goal_[1][1]);
 
 	tilt_angle_publisher_->publish(msg);
 
@@ -413,6 +462,88 @@ float OffboardControl::radiansToDegrees(const float radians) const
 {
     return radians * 180.0 / M_PI;
 }
+
+
+
+
+int OffboardControl::nearestNeighbourIndex(std::vector<double> &_x, double &_value) const
+{
+    double dist = std::numeric_limits<double>::max();
+    double newDist = dist;
+    size_t idx = 0;
+
+    for (size_t i = 0; i < _x.size(); ++i) {
+        newDist = std::abs(_value - _x[i]);
+        if (newDist <= dist) {
+            dist = newDist;
+            idx = i;
+        }
+    }
+
+    return idx;
+}
+
+std::vector<double> OffboardControl::linealInterp1(std::vector<double> &_x, std::vector<double> &_y, std::vector<double> &_x_new) const
+ {
+    std::vector<double> y_new;
+    double dx, dy, m, b;
+    size_t x_max_idx = _x.size() - 1;
+    size_t x_new_size = _x_new.size();
+
+    y_new.reserve(x_new_size);
+
+    for (size_t i = 0; i < x_new_size; ++i) {
+        size_t idx = nearestNeighbourIndex(_x, _x_new[i]);
+
+        if (_x[idx] > _x_new[i]) {
+            dx = idx > 0 ? (_x[idx] - _x[idx - 1]) : (_x[idx + 1] - _x[idx]);
+            dy = idx > 0 ? (_y[idx] - _y[idx - 1]) : (_y[idx + 1] - _y[idx]);
+        } else {
+            dx = idx < x_max_idx ? (_x[idx + 1] - _x[idx]) : (_x[idx] - _x[idx - 1]);
+            dy = idx < x_max_idx ? (_y[idx + 1] - _y[idx]) : (_y[idx] - _y[idx - 1]);
+        }
+
+        m = dy / dx;
+        b = _y[idx] - _x[idx] * m;
+
+        y_new.push_back(_x_new[i] * m + b);
+    }
+
+    return y_new;
+}
+
+std::vector<double> OffboardControl::interpWaypointList(std::vector<double> &_list_pose_axis, int _amount_of_points) const
+{
+    std::vector<double> aux_axis;
+    std::vector<double> new_aux_axis;
+    for (int i = 0; i < _list_pose_axis.size(); i++) {
+        aux_axis.push_back(i);
+    }
+    double portion = (aux_axis.back() - aux_axis.front()) / (_amount_of_points);
+    double new_pose = aux_axis.front();
+    new_aux_axis.push_back(new_pose);
+    for (int i = 1; i < _amount_of_points; i++) {
+        new_pose = new_pose + portion;
+        new_aux_axis.push_back(new_pose);
+    }
+    auto interp1_path = linealInterp1(aux_axis, _list_pose_axis, new_aux_axis);
+    return interp1_path;
+}
+
+
+// nav_msgs::Path OffboardControl::createPathInterp1(std::vector<double> &_list_x, std::vector<double> &_list_y, std::vector<double> &_list_z, int _path_size, int _new_path_size) {
+//     nav_msgs::Path interp1_path;
+//     std::vector<double> interp1_list_x, interp1_list_y, interp1_list_z;
+//     if (_path_size > 1) {
+//         // Lineal interpolation
+//         interp1_list_x = interpWaypointList(_list_x, _new_path_size);
+//         interp1_list_y = interpWaypointList(_list_y, _new_path_size);
+//         interp1_list_z = interpWaypointList(_list_z, _new_path_size);
+//         // Construct path
+//         interp1_path = constructPath(interp1_list_x, interp1_list_y, interp1_list_z);
+//     }
+//     return interp1_path;
+// }
 
 int main(int argc, char* argv[]) {
 
