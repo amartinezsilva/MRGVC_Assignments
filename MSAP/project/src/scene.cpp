@@ -148,6 +148,15 @@ Color3f Scene::getBackground(const Ray3f& ray) const
 	return m_enviromentalEmitter->eval(lRec);
 }
 
+float Scene::getPdfBackground(const Ray3f& ray) const
+{
+    if (!m_enviromentalEmitter)
+        return 0;
+
+    EmitterQueryRecord lRec(m_enviromentalEmitter, ray.o, ray.o + ray.d, Normal3f(0, 0, 1), Vector2f());
+	return m_enviromentalEmitter->pdf(lRec);
+}
+
 
 std::string Scene::toString() const {
     std::string meshes;

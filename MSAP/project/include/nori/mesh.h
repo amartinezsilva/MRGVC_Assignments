@@ -97,8 +97,12 @@ public:
      */
     void samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const;
 
+    void samplePositionSimple(const Point2f &sample, Point3f &p, Normal3f &n) const;
+
 	/// Return the surface area of the given triangle
 	float pdf(const Point3f &p) const;
+
+    float Pdf(const Point3f &p, const Point3f &hitP, const Normal3f &n, const Vector3f &wi) const;
 
     /// Return the surface area of the given triangle
     float surfaceArea(n_UINT index) const;
@@ -183,6 +187,8 @@ public:
      * provided by this instance
      * */
     EClassType getClassType() const { return EMesh; }
+
+    float  m_surfaceArea = 0.0;          ///< Area of the whole surface
 
 protected:
     /// Create an empty mesh

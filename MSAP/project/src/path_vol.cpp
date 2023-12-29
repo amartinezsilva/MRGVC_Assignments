@@ -3,238 +3,214 @@
 #include <nori/scene.h>
 #include <nori/emitter.h>
 #include <nori/bsdf.h>
-#include <nori/medium.h>
-#include <nori/phaseFunction.h>
-#include <iostream>
-#include <cmath>
+#include <nori/ray.h>
 
 NORI_NAMESPACE_BEGIN
 
-class PathTracingVol: public Integrator {
+class PathTracingVOL : public Integrator {
 private:
+	const double P_NO_ABSORTION = 0.95;
 
-public:
-	PathTracingVol(const PropertyList& props) {
-		/* No parameters this time */
-	}
-
-	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
-		Color3f Lo(0.);
-		Color3f Li_em(0.);
+	// pdf_em_back is used in the previous recursive call
+	Color3f Li_rec(const Scene* scene, Sampler* sampler, const Ray3f& ray, float& pdf_em_back) const {
+		Color3f radiance(0.0);
 		Color3f medium_throughput(1.0f, 1.0f, 1.0f);
-
-		std::vector<Medium *> medium = scene->getMedia();  //uncomment if the medium is on the whole scene
-
-		//Ray3f pathRay(ray.o, ray.d);
 		MediumSamplingRecord mRec;
 
-		// Find the surface that is visible in the requested direction 
 		Intersection its;
 
 		bool validIntersection = scene->rayIntersect(ray, its);
 
-		if (!validIntersection)
+		if (!validIntersection) {
+			pdf_em_back = scene->getPdfBackground(ray);
 			return scene->getBackground(ray);
+		}
 
-
-		float em_pdf = 0.0f, mat_pdf = 0.0f;
-		float w_em = 0.0f, w_mat = 0.0f;
+		//std::vector<Medium *> medium = scene->getMedia();  //uncomment if the medium is on the whole scene
 
 
 		if(validIntersection &&	
-			//its.mesh->getMedium()->sampleDistance(ray, mRec, sampler->next2D())){   //uncomment if the medium is contained in a mesh
-			medium[0]->sampleDistance(ray, mRec, sampler->next2D())){ //uncomment if the medium is over all the scene
-			
-
+			its.mesh->hasMedium() && its.mesh->getMedium()->sampleDistance(ray, mRec, sampler->next2D())){   //uncomment if the medium is contained in a mesh
+			//medium[0]->sampleDistance(ray, mRec, sampler->next2D())){ //uncomment if the medium is over all the scene
+		
 			const PhaseFunction *phase = mRec.medium->getPhaseFunction();
-
 			medium_throughput *= mRec.sigmaS * mRec.transmittance / mRec.pdfSuccess;	
 
-			//Russian Roulette
-			if (sampler->next1D() > 0.8){
-				return Lo;
-			}
+			if (its.mesh->isEmitter()) {	// Account for visible light sources
+				EmitterQueryRecord emR;
+				emR.wi = ray.d;
+				emR.n = its.shFrame.n;
+				emR.dist = its.t;
+				emR.p = its.p;
 
-			// //Inscattering
+				pdf_em_back = its.mesh->getEmitter()->pdf(emR);
+				return medium_throughput * its.mesh->getEmitter()->eval(emR);
+			}	
+			pdf_em_back = 0;
 
-			//Sample emitter
-
-			EmitterQueryRecord emitterRecord(its.p);
+			// NEE, but needed for BSDF sampling
 			float pdflight;
-			// Sample random light source
-			const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), pdflight);
+			const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight);
 
-			Color3f Le = random_emitter->sample(emitterRecord, sampler->next2D(), 0.);
-
-			// Check if intersected material is emitter
-			if(its.mesh->isEmitter()){
-				emitterRecord.ref = ray.o;
-				emitterRecord.wi = -ray.d;
-				emitterRecord.n = its.shFrame.n;
-				return medium_throughput * its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
-			}
-			
-			// Here perform a visibility query, to check whether the light 
-			// source "em" is visible from the intersection point. 
-			// For that, we create a ray object (shadow ray),
-			// and compute the intersection
-			
-			Ray3f shadow_ray(its.p, emitterRecord.wi);
-			// Ensures that the shadow ray does not overshoot the light source.
-			shadow_ray.maxt = (emitterRecord.p - its.p).norm();
-			Intersection shadowIntersection;
-			if (!scene->rayIntersect(shadow_ray, shadowIntersection)){
-				float pdfpositionlight = random_emitter->pdf(emitterRecord);
-				em_pdf = pdflight * pdfpositionlight;
-				PhaseFunctionQueryRecord pRec(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), ESolidAngle); //to_local??
-				float phaseVal = phase->eval(pRec);
-				float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);	
-				mat_pdf = pRec.pdf;
-				
-				if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
-				else w_em = em_pdf;
-				
-				Li_em +=  w_em * Le * cos_theta_i * Color3f(pRec.pdf)/ (pdflight*pdfpositionlight);
-			}
-
-			em_pdf = 0.0f, mat_pdf = 0.0f;
-
-			//Sample phase function
+			// -------------- Generating next step with BSDF sampling --------------
 			PhaseFunctionQueryRecord pRec_samp(its.toLocal(-ray.d), Vector3f(0.0f), ESolidAngle); //to_local??
-			float phaseVal = phase->sample(pRec_samp, sampler->next2D());
-			Color3f throughput = Color3f(pRec_samp.pdf);
-			mat_pdf = pRec_samp.pdf;
-            medium_throughput *= phaseVal;
-
+			float phase_sampled = phase->sample(pRec_samp, sampler->next2D());
+			//Color3f phase_sampled = Color3f(pRec_samp.pdf);
+			//medium_throughput *= phaseVal;
+			//BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d));
+			//Color3f bsdf_sampled = its.mesh->getBSDF()->sample(bsdfRecord, sampler->next2D());
+			//Ray3f newRay(its.p, its.toWorld(bsdfRecord.wo));
 			Vector3f wo = Frame(-pRec_samp.wi).toWorld(pRec_samp.wo);
-            Ray3f pathRay = Ray3f(mRec.p, wo);
-            pathRay.mint = 0.0f;
+            Ray3f newRay = Ray3f(mRec.p, wo);
 
-			Intersection new_its;
-			bool intersection = scene->rayIntersect(pathRay, new_its);
+			float pdf_em_phaseDir = 0;
+			if (sampler->next1D() < P_NO_ABSORTION) {
+				Color3f Li = Li_rec(scene, sampler, newRay, pdf_em_phaseDir) / P_NO_ABSORTION;
 
-			// Conditions
-			if (intersection && new_its.mesh->isEmitter()) {
-				EmitterQueryRecord new_emitterRecord;
-				new_emitterRecord.wi = pathRay.d;
-				new_emitterRecord.n = new_its.shFrame.n;
-				new_emitterRecord.dist = new_its.t;
-				em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
+				float w_bsdf;
+				// if (bsdfRecord.measure == EDiscrete) {
+				// 	w_bsdf = 1.0;
+				// } else {
+				w_bsdf = pRec_samp.pdf;
+					//w_bsdf = its.mesh->getBSDF()->pdf(bsdfRecord);
+				//}
+				if (w_bsdf > Epsilon) {	 // Avoiding -nans
+					w_bsdf /= w_bsdf + (pdflight * pdf_em_phaseDir);
+				}
+				radiance += medium_throughput * Li * phase_sampled * w_bsdf;
+				//radiance += Li * bsdf_sampled * w_bsdf;
 			}
 
-			if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
-			else w_mat = mat_pdf;
-
-			// EMITTER SAMPLING contribution
-			Lo += medium_throughput* Li_em / 0.8;
-
-			// Phase function contribution
-			Lo += medium_throughput * w_mat * throughput * Li(scene, sampler, pathRay) / 0.8;
-
-
-		} else {
-			// if(its.mesh->hasMedium()){ //uncomment if the medium is on a mesh
-            //     medium_throughput *= mRec.transmittance / mRec.pdfFailure;
-			// }
-
-			cout << "Outside medium!" << endl;
+		// ---------------------- Next event estimation -----------------------
+		//if (bsdfRecord.measure != EDiscrete) {
 			EmitterQueryRecord emitterRecord(its.p);
+			Color3f Le_emitter = em->sample(emitterRecord, sampler->next2D(), 0.);
+			
+			PhaseFunctionQueryRecord pRec(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), ESolidAngle); //to_local??
+			float phaseVal = phase->eval(pRec);
+			float pdf_phase_emDir = pRec.pdf;
+			float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);
 
+			// BSDFQueryRecord bsdfRecord_eval(its.toLocal(-ray.d),
+			// 					its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
+			// auto throughput = its.mesh->getBSDF()->eval(bsdfRecord_eval);
+			// float pdf_bsdf_emDir = its.mesh->getBSDF()->pdf(bsdfRecord_eval);
+
+			// Visibility query
+			Ray3f shadowRay(its.p, emitterRecord.wi);
+			Intersection its_shadow;
+			bool intersect_shadow = scene->rayIntersect(shadowRay, its_shadow);
+			if (!intersect_shadow || its_shadow.t > (emitterRecord.dist - Epsilon)) {
+				float w_em = pdflight * em->pdf(emitterRecord);
+				if (w_em > Epsilon) {	 // Avoiding -nans
+					w_em /= w_em + pdf_phase_emDir;
+				}
+				
+				// radiance += w_em * Le_emitter * its.shFrame.n.dot(emitterRecord.wi) * throughput
+				// 	  		/ pdflight;
+				radiance += medium_throughput * w_em * Le_emitter * cos_theta_i * phaseVal
+							/ pdflight;
+			}
+		} else {
+			if(its.mesh->hasMedium()){ //uncomment if the medium is on a mesh
+                medium_throughput *= mRec.transmittance / mRec.pdfFailure;
+			}
+			
+			if (its.mesh->isEmitter()) {	// Account for visible light sources
+				EmitterQueryRecord emR;
+				emR.wi = ray.d;
+				emR.n = its.shFrame.n;
+				emR.dist = its.t;
+				emR.p = its.p;
+
+				pdf_em_back = its.mesh->getEmitter()->pdf(emR);
+				return medium_throughput * its.mesh->getEmitter()->eval(emR);
+			}	
+			pdf_em_back = 0;
+
+			// NEE, but needed for BSDF sampling
 			float pdflight;
-			// Sample random light source
-			const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), pdflight);
+			const Emitter* em = scene->sampleEmitter(sampler->next1D(), pdflight);
 
-			Color3f Le = random_emitter->sample(emitterRecord, sampler->next2D(), 0.);
+			// -------------- Generating next step with BSDF sampling --------------
+			// PhaseFunctionQueryRecord pRec_samp(its.toLocal(-ray.d), Vector3f(0.0f), ESolidAngle); //to_local??
+			// float phaseVal = phase->sample(pRec_samp, sampler->next2D());
+			// Color3f phase_sampled = Color3f(pRec_samp.pdf);
+			//medium_throughput *= phaseVal;
+			BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d));
+			Color3f bsdf_sampled = its.mesh->getBSDF()->sample(bsdfRecord, sampler->next2D());
+			Ray3f newRay(its.p, its.toWorld(bsdfRecord.wo));
+			// Vector3f wo = Frame(-pRec_samp.wi).toWorld(pRec_samp.wo);
+            // Ray3f newRay = Ray3f(mRec.p, wo);
 
-			// Check if intersected material is emitter
-			if(its.mesh->isEmitter()){
-				emitterRecord.ref = ray.o;
-				emitterRecord.wi = -ray.d;
-				emitterRecord.n = its.shFrame.n;
-				return medium_throughput * its.mesh->getEmitter()->sample(emitterRecord, sampler->next2D(), 0.);
+			float pdf_em_bsdfDir = 0;
+			if (sampler->next1D() < P_NO_ABSORTION) {
+				Color3f Li = Li_rec(scene, sampler, newRay, pdf_em_bsdfDir) / P_NO_ABSORTION;
+
+				float w_bsdf;
+				if (bsdfRecord.measure == EDiscrete) {
+					w_bsdf = 1.0;
+				} else {
+				    //w_bsdf = pRec_samp.pdf;
+					w_bsdf = its.mesh->getBSDF()->pdf(bsdfRecord);
+				}
+				if (w_bsdf > Epsilon) {	 // Avoiding -nans
+					w_bsdf /= w_bsdf + (pdflight * pdf_em_bsdfDir);
+				}
+				//radiance += medium_throughput * Li * phaseVal-> * w_bsdf;
+				radiance += medium_throughput * Li * bsdf_sampled * w_bsdf;
 			}
 
-			//Russian Roulette
-			if (sampler->next1D() > 0.8){
-				return Lo;
-			}
-			
-			// Here perform a visibility query, to check whether the light 
-			// source "em" is visible from the intersection point. 
-			// For that, we create a ray object (shadow ray),
-			// and compute the intersection
-			
-			Ray3f shadow_ray(its.p, emitterRecord.wi);
-			// Ensures that the shadow ray does not overshoot the light source.
-			shadow_ray.maxt = (emitterRecord.p - its.p).norm();
-			Intersection shadowIntersection;
-			if (!scene->rayIntersect(shadow_ray, shadowIntersection)){
-				float pdfpositionlight = random_emitter->pdf(emitterRecord);
-				em_pdf = pdflight * pdfpositionlight;
-				BSDFQueryRecord bsdfRecord(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
-				Color3f fr = its.mesh->getBSDF()->eval(bsdfRecord);
-				float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);	
-				mat_pdf = its.mesh->getBSDF()->pdf(bsdfRecord);
-
+		// ---------------------- Next event estimation -----------------------
+			if (bsdfRecord.measure != EDiscrete) {
+				EmitterQueryRecord emitterRecord(its.p);
+				Color3f Le_emitter = em->sample(emitterRecord, sampler->next2D(), 0.);
 				
-				if(mat_pdf + em_pdf > 0.0f) w_em = em_pdf / (mat_pdf + em_pdf);
-				else w_em = em_pdf;
-				
-				Li_em +=  w_em * Le * fr * cos_theta_i / (pdflight*pdfpositionlight);
+				// PhaseFunctionQueryRecord pRec(its.toLocal(-ray.d),its.toLocal(emitterRecord.wi), ESolidAngle); //to_local??
+				// float phaseVal = phase->eval(pRec);
+				// float pdf_phase_emDir = pRec.pdf;
+				// float cos_theta_i = its.shFrame.n.dot(emitterRecord.wi);
+
+				BSDFQueryRecord bsdfRecord_eval(its.toLocal(-ray.d),
+									its.toLocal(emitterRecord.wi), its.uv, ESolidAngle);
+				auto throughput = its.mesh->getBSDF()->eval(bsdfRecord_eval);
+				float pdf_bsdf_emDir = its.mesh->getBSDF()->pdf(bsdfRecord_eval);
+
+				// Visibility query
+				Ray3f shadowRay(its.p, emitterRecord.wi);
+				Intersection its_shadow;
+				bool intersect_shadow = scene->rayIntersect(shadowRay, its_shadow);
+				if (!intersect_shadow || its_shadow.t > (emitterRecord.dist - Epsilon)) {
+					float w_em = pdflight * em->pdf(emitterRecord);
+					if (w_em > Epsilon) {	 // Avoiding -nans
+						w_em /= w_em + pdf_bsdf_emDir;
+					}
+					
+					radiance += medium_throughput * w_em * Le_emitter * its.shFrame.n.dot(emitterRecord.wi) * throughput
+						  		/ pdflight;
+					// radiance += medium_throughput * w_em * Le_emitter * cos_theta_i * phaseVal
+					// 			/ pdflight;
+				}
 			}
-
-			em_pdf = 0.0f, mat_pdf = 0.0f;
-
-			//BSDF
-			BSDFQueryRecord bsdfRecord_samp(its.toLocal(-ray.d), its.uv);
-			Color3f throughput = its.mesh->getBSDF()->sample(bsdfRecord_samp, sampler->next2D());
-			mat_pdf = its.mesh->getBSDF()->pdf(bsdfRecord_samp);
-
-
-			Vector3f new_dir = its.toWorld(bsdfRecord_samp.wo);
-
-			//reflect
-			Ray3f rayR = Ray3f(its.p, new_dir);
-
-			Intersection new_its;
-			bool intersection = scene->rayIntersect(rayR, new_its);
-
-			// Conditions
-			if (intersection && new_its.mesh->isEmitter()) {
-				EmitterQueryRecord new_emitterRecord;
-				new_emitterRecord.wi = rayR.d;
-				new_emitterRecord.n = new_its.shFrame.n;
-				new_emitterRecord.dist = new_its.t;
-				em_pdf = new_its.mesh->getEmitter()->pdf(new_emitterRecord);
-			}
-
-			if(mat_pdf + em_pdf > 0.0f) w_mat = mat_pdf / (mat_pdf + em_pdf);
-			else w_mat = mat_pdf;
-
-			if (bsdfRecord_samp.measure == EDiscrete) {
-				// BSDF contribution
-				//return Li_em / 0.8;
-				w_mat = 1.0 / (1.0 + em_pdf);
-				return w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
-			}
-
-
-			// EMITTER SAMPLING contribution
-			Lo += medium_throughput* Li_em / 0.8;
-
-			// BSDF contribution
-			Lo += medium_throughput * w_mat * throughput * Li(scene, sampler, rayR) / 0.8;
-
 		}
 
+		return radiance;	
+	}
 
-		return Lo;
+public:
+	PathTracingVOL(const PropertyList& props) {
+		/* No parameters this time */
+	}
+
+	Color3f Li(const Scene* scene, Sampler* sampler, const Ray3f& ray) const {
+		float unused;
+		return Li_rec(scene, sampler, ray, unused);
 	}
 
 	std::string toString() const {
-		return "PathTracingVol[]";
+		return "Path tracing VOL []";
 	}
 };
 
-NORI_REGISTER_CLASS(PathTracingVol, "path_vol");
+NORI_REGISTER_CLASS(PathTracingVOL, "path_vol") ;
 NORI_NAMESPACE_END

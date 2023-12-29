@@ -71,7 +71,7 @@ public:
     virtual float getTransmittancePDF(float distance, int channel) const = 0;
     virtual PhaseFunction* getPhaseFkt() const = 0;
 
-    virtual void addChild(NoriObject *obj) {}
+    virtual void addChild(NoriObject *obj, const std::string& name) {}
 
     EClassType getClassType() const { return EVolume; }
 protected:

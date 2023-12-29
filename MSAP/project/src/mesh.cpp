@@ -50,6 +50,7 @@ void Mesh::activate() {
 
     for(uint32_t i = 0 ; i < m_F.cols() ; ++i) {
         m_pdf.append(surfaceArea(i));
+        m_surfaceArea += surfaceArea(i);
     }
 
     m_pdf.normalize();
@@ -155,12 +156,86 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
     return;	
 }
 
+void Mesh::samplePositionSimple(const Point2f &sample, Point3f &p, Normal3f &n) const {
+    Point2f new_sample = sample;
+    //get a random face
+    size_t faceIndex = m_pdf.sampleReuse(new_sample(0));
+
+
+    // sample the triangle of the face
+    Point2f uv = Warp::squareToUniformTriangle(new_sample);
+
+    //get the vertex index
+    uint32_t i0 = m_F(0, faceIndex), i1 = m_F(1, faceIndex), i2 = m_F(2, faceIndex);
+
+    //get the points
+    Point3f p0 = m_V.col(i0), p1 = m_V.col(i1), p2 = m_V.col(i2);
+
+    //compute the edge vectors
+    Vector3f edge1 = (p1 - p0);
+    Vector3f edge2 =  (p2 - p0);
+    Vector3f e1 = uv(0) * edge1;
+    Vector3f e2 = uv(1) * edge2;
+
+    //compute the new point
+    p = p0 + e1 + e2;
+
+    //compute the normal base on baycentric coordinates
+    //get the vertex normals
+    if(m_N.cols() > 3) {
+        Normal3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
+        Vector3f w0 = p0 - p;
+        Vector3f w1 = p1 - p;
+        Vector3f w2 = p2 - p;
+
+        float area = (edge1.cross(edge2)).norm();
+        if(area != 0.0f){
+            float u = (w0.cross(w1)).norm() / area;
+            float v = (w1.cross(w2)).norm() / area;
+
+            n = (1.0f - u - v) * n0 + v * n1 + u * n2;
+            n.normalized();
+
+        } else {
+            n = (e1.cross(e2)).normalized();
+
+        }
+    } else {
+        //no normals provided
+        n = (e1.cross(e2)).normalized();
+        if(isnan(n.sum())){
+            cout << "Normal is nan" << endl;
+            cout << "e1 " << e1 << endl;
+            cout << "e2 " << e2 << endl;
+        }
+    }
+
+
+
+
+    //n = uv(0) * n0 + uv(1) * n1 + (1.0f - uv(0) - uv(1)) * n2;
+
+}
+
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
     float meshArea = m_pdf.getNormalization();
 	
 	return meshArea;
+}
+
+float Mesh::Pdf(const Point3f &p, const Point3f &hitP, const Normal3f &n, const Vector3f &wi) const {
+    float distSquared = (hitP - p).squaredNorm();
+
+    float AbsDot = std::abs(n.dot(- wi));
+
+
+    if(AbsDot != 0.0f && m_surfaceArea != 0.0f) {
+        return distSquared / (AbsDot * m_surfaceArea);
+    } else {
+        return 0.0f;
+    }
 }
 
 

@@ -69,6 +69,8 @@ public:
 	/// Return a the scene background
 	Color3f getBackground(const Ray3f& ray) const;
 
+    float getPdfBackground(const Ray3f& ray) const;
+
     //Return a reference to an array containing all media
     const std::vector<Medium *> &getMedia() const { return m_media; }
 
@@ -85,6 +87,7 @@ public:
 	{
 		return m_enviromentalEmitter;
 	}
+
 
     /**
      * \brief Intersect a ray against all triangles stored in the scene
@@ -149,7 +152,7 @@ private:
 	std::vector<Emitter *> m_emitters;
     std::vector<Volume *> m_volumes;
     std::vector<Medium *> m_media;
-	Emitter *m_enviromentalEmitter = nullptr;
+    Emitter *m_enviromentalEmitter = nullptr;
 	
     Integrator *m_integrator = nullptr;
     Sampler *m_sampler = nullptr;

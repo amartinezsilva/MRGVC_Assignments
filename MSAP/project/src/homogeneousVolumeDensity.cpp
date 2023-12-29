@@ -125,7 +125,7 @@ public:
     }
 
 
-    void addChild(NoriObject *obj) {
+    void addChild(NoriObject *obj, const std::string& name) {
         switch (obj->getClassType()) {
             case EPhaseFunction:
                 if (m_phase)

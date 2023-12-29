@@ -41,6 +41,7 @@ add_executable(nori
 
   # Header files
   include/nori/accel.h
+  include/nori/areaLight.h
   include/nori/bbox.h
   include/nori/bitmap.h
   include/nori/block.h
@@ -81,6 +82,7 @@ add_executable(nori
   # Source code files
   src/accel.cpp
   src/area.cpp
+  src/areaLight.cpp
   src/bitmap.cpp
   src/block.cpp
   src/chi2test.cpp
@@ -122,6 +124,8 @@ add_executable(nori
   src/HenyeyGreenstein.cpp
   src/path_vol.cpp
   src/homogeneousVolumeDensity.cpp
+  src/basicMediumPathTracer.cpp
+  src/basicVolumentricPathTracer.cpp
 
   # src/Core/scene.cpp
   # src/Integrators/basicMediumPathTracer.cpp
