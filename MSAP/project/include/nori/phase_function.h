@@ -35,24 +35,18 @@ struct PhaseFunctionQueryRecord {
     /// Outgoing direction (in the local frame)
     Vector3f wo;
 
-    /// Relative refractive index in the sampled direction
-    float eta;
-
-    // pdf of the query
-    float pdf;
-
     /// Measure associated with the sample
     EMeasure measure;
 
     PhaseFunctionQueryRecord() { }
-    /// Create a new record for sampling the BSDF
+    /// Create a new record for sampling the phase function
     PhaseFunctionQueryRecord(const Vector3f &wi)
-        : wi(wi), measure(EUnknownMeasure) { }
+        : wi(wi){ }
 
-    /// Create a new record for querying the BSDF
+    /// Create a new record for querying the phase function
     PhaseFunctionQueryRecord(const Vector3f &wi,
-            const Vector3f &wo, EMeasure measure)
-        : wi(wi), wo(wo), measure(measure) { }
+            const Vector3f &wo)
+        : wi(wi), wo(wo) { }
 };
 
 class PhaseFunction : public NoriObject {
@@ -64,11 +58,11 @@ public:
     virtual float sample(PhaseFunctionQueryRecord &bRec, const Point2f &sample) const = 0;
 
 
-    virtual float eval(PhaseFunctionQueryRecord &bRec) const = 0;
+    virtual float pdf(PhaseFunctionQueryRecord &bRec) const = 0;
 
     EClassType getClassType() const { return EPhaseFunction; }
-protected:
-    size_t m_sampleCount;
+
+
 };
 
 NORI_NAMESPACE_END

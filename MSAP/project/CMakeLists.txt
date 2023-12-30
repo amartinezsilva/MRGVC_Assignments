@@ -70,7 +70,7 @@ add_executable(nori
   include/nori/reflectance.h
 
   #PROJECT
-  include/nori/phaseFunction.h
+  include/nori/phase_function.h
   include/nori/medium.h
   include/nori/volume.h
 
@@ -121,7 +121,7 @@ add_executable(nori
 
   # PROJECT
   src/medium.cpp
-  src/HenyeyGreenstein.cpp
+  src/henyey_greenstein.cpp
   src/path_vol.cpp
   src/homogeneousVolumeDensity.cpp
   src/basicMediumPathTracer.cpp
