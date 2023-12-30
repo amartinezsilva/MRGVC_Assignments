@@ -72,7 +72,6 @@ add_executable(nori
   #PROJECT
   include/nori/phase_function.h
   include/nori/medium.h
-  include/nori/volume.h
 
   # include/nori/areaLight.h
   # include/nori/phaseFunction.h
@@ -117,15 +116,11 @@ add_executable(nori
   src/path.cpp
   src/path_nee.cpp
   src/path_mis.cpp
-  src/path_vol.cpp
 
   # PROJECT
   src/medium.cpp
   src/henyey_greenstein.cpp
-  src/path_vol.cpp
-  src/homogeneousVolumeDensity.cpp
-  src/basicMediumPathTracer.cpp
-  src/basicVolumentricPathTracer.cpp
+  #src/path_vol.cpp
 
   # src/Core/scene.cpp
   # src/Integrators/basicMediumPathTracer.cpp
