@@ -20,6 +20,7 @@
 
 #include <nori/vector.h>
 
+
 NORI_NAMESPACE_BEGIN
 
 /**
@@ -44,27 +45,35 @@ template <typename _PointType, typename _VectorType> struct TRay {
     VectorType dRcp; ///< Componentwise reciprocals of the ray direction
     Scalar mint;     ///< Minimum position on the ray segment
     Scalar maxt;     ///< Maximum position on the ray segment
+    const Medium *medium = NULL;
 
     /// Construct a new ray
     TRay() : mint(Epsilon), 
-        maxt(std::numeric_limits<Scalar>::infinity()) { }
+        maxt(std::numeric_limits<Scalar>::infinity()), medium(NULL) { }
     
     /// Construct a new ray
     TRay(const PointType &o, const VectorType &d) : o(o), d(d), 
-            mint(Epsilon), maxt(std::numeric_limits<Scalar>::infinity()) {
+            mint(Epsilon), maxt(std::numeric_limits<Scalar>::infinity()), medium(NULL) {
         update();
     }
 
     /// Construct a new ray
     TRay(const PointType &o, const VectorType &d, 
-        Scalar mint, Scalar maxt) : o(o), d(d), mint(mint), maxt(maxt) {
+        Scalar mint, Scalar maxt) : o(o), d(d), mint(mint), maxt(maxt), medium(NULL) {
         update();
     }
+
+    /// Construct a new ray
+    TRay(const PointType &o, const VectorType &d, 
+        Scalar mint, Scalar maxt, const Medium* m) : o(o), d(d), mint(mint), maxt(maxt), medium(m) {
+        update();
+    }
+
 
     /// Copy constructor
     TRay(const TRay &ray) 
      : o(ray.o), d(ray.d), dRcp(ray.dRcp),
-       mint(ray.mint), maxt(ray.maxt) { }
+       mint(ray.mint), maxt(ray.maxt), medium(ray.medium) { }
 
     /// Copy a ray, but change the covered segment of the copy
     TRay(const TRay &ray, Scalar mint, Scalar maxt) 
