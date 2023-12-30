@@ -23,6 +23,8 @@
 #pragma once
 
 #include <nori/object.h>
+#include <nori/medium.h>
+
 
 NORI_NAMESPACE_BEGIN
 
@@ -184,10 +186,29 @@ public:
 
 	bool isDelta() const { return m_type == EmitterType::EMITTER_POINT; }
 
+    virtual void addChild(NoriObject *obj, const std::string& name = "none") override
+    {
+        switch (obj->getClassType()) {
+            case EMedium:
+                if (m_medium)
+                    throw NoriException(
+                        "Emitter: tried to register multiple BSDF instances!");
+                m_medium = static_cast<Medium *>(obj);
+                break;
+            default:
+                throw NoriException("Shape::addChild(<%s>) is not supported!",
+                                    classTypeName(obj->getClassType()));
+        }
+    }
+
+
+    const Medium *getMedium() const { return m_medium; }
+
 protected:
     /// Pointer to the mesh if the emitter is attached to a mesh
     Mesh * m_mesh = nullptr;
 	EmitterType m_type;
+    Medium * m_medium = nullptr;
 };
 
 NORI_NAMESPACE_END
