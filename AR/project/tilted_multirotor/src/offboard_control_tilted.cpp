@@ -93,6 +93,7 @@ public:
 			this->create_publisher<VehicleCommand>("fmu/vehicle_command/in");
 		tilt_angle_publisher_ =
 			this->create_publisher<TiltingMcDesiredAngles>("/fmu/tilting_mc_desired_angles/in");
+
 #endif
 
 		// get common timestamp
@@ -105,16 +106,9 @@ public:
 		odometry_sub_ = 
 			this->create_subscription<px4_msgs::msg::VehicleOdometry>("/fmu/vehicle_odometry/out", 10,
 				[this](const px4_msgs::msg::VehicleOdometry::UniquePtr msg) {
-					// std::cout << "\n\n\n\n\n\n\n\n\n\n";
-					// std::cout << "RECEIVED ODOMETRY DATA"   << std::endl;
-					// std::cout << "=================================="   << std::endl;
-					// std::cout << "ts: "      << msg->timestamp    << std::endl;
+					
 					std::cout << "x: " << msg->x << "y: " << msg->y << "z: " << msg->z  << std::endl;
-					// std::cout << "q1: " << msg->q[0]  << std::endl;
-					// std::cout << "q2: " << msg->q[1] << std::endl;
-					// std::cout << "q3: " << msg->q[2]  << std::endl;
-					// std::cout << "q4: " << msg->q[3]  << std::endl;
-
+					
 					float q[4];
 					for (int i = 0; i < 4; ++i) {
 						q[i] = msg->q[i];
@@ -224,7 +218,7 @@ public:
 		//DEBUG: write interpolated trajectory to a .txt
 		// Open the file for writing
 		// Specify the filename
-    	std::string output_filename = "interpolated_trajectory.txt";
+    	std::string output_filename = "interpolated_trajectory.csv";
 		std::ofstream outputFile(output_filename);
 
 		// Check if the file is open
@@ -233,10 +227,12 @@ public:
 			return;
 		}
 
+		// Write column headers
+    	outputFile << "x,y,z,roll,pitch,yaw" << std::endl;
 		// Write the vectors to the file
 		for (size_t i = 0; i < x_interp.size(); ++i) {
-			outputFile << x_interp[i] << "\t" << y_interp[i] << "\t" << z_interp[i] << "\t"
-					<< r_interp[i] << "\t" << p_interp[i] << "\t" << yaw_interp[i] << std::endl;
+			outputFile << x_interp[i] << "," << y_interp[i] << "," << z_interp[i] << ","
+					<< r_interp[i] << "," << p_interp[i] << "," << yaw_interp[i] << std::endl;
 
 			std::vector<double> target;
 			target.push_back(x_interp[i]);
