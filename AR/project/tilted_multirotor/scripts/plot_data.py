@@ -74,6 +74,40 @@ def plot_pose_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experimen
 
     plt.show()
 
+def plot_velocity_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experiment):
+    
+
+    fig, axes = plt.subplots(3, 1, figsize=(10, 15))
+    plt.title("Temporal Evolution of velocities")
+
+    # Subtract the first element of the timestamp column to start from 0
+    df_experiment[cols_experiment[0]] -= df_experiment[cols_experiment[0]].iloc[0]
+    df_ref[cols_ref[0]] -= df_ref[cols_ref[0]].iloc[0]
+
+    # Subtract the first element of the timestamp column to start from 0
+    df_experiment[cols_experiment[0]] *= 1e-6
+    df_ref[cols_ref[0]] *= 1e-6
+
+    axes[0].plot(np.array(df_experiment[cols_experiment[0]]), np.array(df_experiment[cols_experiment[1]]), c='b', label = 'state')
+    axes[0].plot(np.array(df_ref[cols_ref[0]]), np.array(df_ref[cols_ref[1]]), c='r', label = 'reference')
+    axes[0].legend()
+    #plt.xlabel("Timestamp")
+    axes[0].set_ylabel("vx(m/s)")
+    axes[0].grid()
+    axes[1].plot(np.array(df_experiment[cols_experiment[0]]), np.array(df_experiment[cols_experiment[2]]), c='b')
+    axes[1].plot(np.array(df_ref[cols_ref[0]]), np.array(df_ref[cols_ref[2]]), c='r')
+    axes[1].set_ylabel("vy(m/s)")
+    axes[1].grid()
+
+    axes[2].plot(np.array(df_experiment[cols_experiment[0]]), np.array(abs(df_experiment[cols_experiment[3]])), c='b')
+    axes[2].plot(np.array(df_ref[cols_ref[0]]), np.array(abs(df_ref[cols_ref[3]])), c='r')
+    axes[2].set_ylabel("vz(m/s)")
+    axes[2].grid()
+
+    axes[2].set_xlabel("Time(s)")
+
+
+    plt.show()
 
 def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_ref_rp, cols_ref_yaw, cols_experiment):
     
@@ -115,12 +149,12 @@ def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_
 
 def plot_experiment_data(path_interp, path_experiment_data):
 
-    #
+    #Get column names from interpolated trajectory file 
     x_interp = 'x'
     y_interp = 'y'
     z_interp = 'z'
     
-    # Replace 'x', 'y', and 'z' with the actual column names you want to plot
+    #Get names of the topics we want to plot
     time_data = '/fmu/vehicle_odometry/out/timestamp'
     x_data = '/fmu/vehicle_odometry/out/x'
     y_data = '/fmu/vehicle_odometry/out/y'
@@ -129,16 +163,25 @@ def plot_experiment_data(path_interp, path_experiment_data):
     q1 = '/fmu/vehicle_odometry/out/q.1'
     q2 = '/fmu/vehicle_odometry/out/q.2'
     q3 = '/fmu/vehicle_odometry/out/q.3'
+    vx_data = '/fmu/vehicle_odometry/out/vx'
+    vy_data = '/fmu/vehicle_odometry/out/vy'
+    vz_data = '/fmu/vehicle_odometry/out/vz'
 
     time_data_setpoint = '/fmu/trajectory_setpoint/in/timestamp'
     x_ref = '/fmu/trajectory_setpoint/in/x'
     y_ref = '/fmu/trajectory_setpoint/in/y'
     z_ref = '/fmu/trajectory_setpoint/in/z'
     yaw_ref = '/fmu/trajectory_setpoint/in/yaw'
+    vx_ref = '/fmu/trajectory_setpoint/in/vx'
+    vy_ref = '/fmu/trajectory_setpoint/in/vy'
+    vz_ref = '/fmu/trajectory_setpoint/in/vz'
+
 
     time_data_tilt = '/fmu/tilting_mc_desired_angles/in/timestamp'
     roll_ref = '/fmu/tilting_mc_desired_angles/in/roll_body'
     pitch_ref = '/fmu/tilting_mc_desired_angles/in/pitch_body'
+
+    # Plot 3D representation
 
     columns_3D_experiment_data = [x_data, y_data, z_data]
     columns_3D_interp = [x_interp, y_interp, z_interp]
@@ -146,15 +189,17 @@ def plot_experiment_data(path_interp, path_experiment_data):
     experiment_data_df = read_pandas_df(path_experiment_data, columns_3D_experiment_data)
     interp_trajectory_df = read_pandas_df(path_interp, columns_3D_interp)
 
-    # Plot 3D scatter plot
     plot_3d_scatter(interp_trajectory_df, experiment_data_df, columns_3D_interp, columns_3D_experiment_data)
 
+    
+    #Plot position vs time
     columns_position_ref = [time_data_setpoint, x_ref, y_ref, z_ref]
     columns_position = [time_data, x_data, y_data, z_data]
     position_df = read_pandas_df(path_experiment_data, columns_position)
     position_setpoint_df = read_pandas_df(path_experiment_data, columns_position_ref)
     plot_pose_temporal_evolution(position_setpoint_df, position_df, columns_position_ref, columns_position)
 
+    #Plot attitude vs time
     columns_attitude_rollpitch_ref = [time_data_tilt, roll_ref, pitch_ref]
     columns_attitude_yaw_ref = [time_data_setpoint, yaw_ref]
     columns_attitude_exp = [time_data, q0, q1, q2, q3]
@@ -167,6 +212,16 @@ def plot_experiment_data(path_interp, path_experiment_data):
     attitude_setpoint_yaw_df = read_pandas_df(path_experiment_data, columns_attitude_yaw_ref)
 
     plot_attitude_temporal_evolution(attitude_setpoint_rollpitch_df, attitude_setpoint_yaw_df, attitude_data_df, columns_attitude_rollpitch_ref, columns_attitude_yaw_ref, columns_attitude_exp)
+
+    #Plot velocity vs time
+    columns_velocity = [time_data, vx_data, vy_data, vz_data]
+    columns_velocity_ref = [time_data_setpoint, vx_ref, vy_ref, vz_ref]
+
+    velocity_setpoint_df = read_pandas_df(path_experiment_data, columns_velocity_ref)
+    velocity_df = read_pandas_df(path_experiment_data, columns_velocity)
+
+    plot_velocity_temporal_evolution(velocity_setpoint_df, velocity_df, columns_velocity_ref, columns_velocity)
+
 
 def read_pandas_df(path, columns):
 
