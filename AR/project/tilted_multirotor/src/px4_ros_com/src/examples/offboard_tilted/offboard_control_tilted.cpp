@@ -230,7 +230,7 @@ public:
 		std::vector<double> z_interp =  interpWaypointList(list_z, new_path_size);
 		std::vector<double> r_interp =  interpWaypointList(list_r, new_path_size);
 		std::vector<double> p_interp =  interpWaypointList(list_p, new_path_size);
-		std::vector<double> yaw_interp =  interpWaypointList(list_y, new_path_size);
+		std::vector<double> yaw_interp =  interpWaypointList(list_yaw, new_path_size);
 
 		//DEBUG: write interpolated trajectory to a .txt
 		// Open the file for writing
