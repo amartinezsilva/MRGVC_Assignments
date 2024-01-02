@@ -97,12 +97,8 @@ public:
      */
     void samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const;
 
-    void samplePositionSimple(const Point2f &sample, Point3f &p, Normal3f &n) const;
-
 	/// Return the surface area of the given triangle
 	float pdf(const Point3f &p) const;
-
-    float Pdf(const Point3f &p, const Point3f &hitP, const Normal3f &n, const Vector3f &wi) const;
 
     /// Return the surface area of the given triangle
     float surfaceArea(n_UINT index) const;
@@ -142,6 +138,9 @@ public:
      *   \c true if an intersection has been detected
      */
     bool rayIntersect(n_UINT index, const Ray3f &ray, float &u, float &v, float &t) const;
+
+    /// Set intersection information: hit point, shading frame, UVs
+    virtual void setHitInformation(uint32_t index, const Ray3f &ray, Intersection & its) const;
 
     /// Return a pointer to the vertex positions
     const MatrixXf &getVertexPositions() const { return m_V; }

@@ -103,6 +103,45 @@ bool Mesh::rayIntersect(n_UINT index, const Ray3f &ray, float &u, float &v, floa
     return t >= ray.mint && t <= ray.maxt;
 }
 
+void Mesh::setHitInformation(uint32_t index, const Ray3f &ray, Intersection & its) const {
+    /* Find the barycentric coordinates */
+    Vector3f bary;
+    bary << 1-its.uv.sum(), its.uv;
+
+    /* Vertex indices of the triangle */
+    uint32_t idx0 = m_F(0, index), idx1 = m_F(1, index), idx2 = m_F(2, index);
+
+    Point3f p0 = m_V.col(idx0), p1 = m_V.col(idx1), p2 = m_V.col(idx2);
+
+    /* Compute the intersection positon accurately
+       using barycentric coordinates */
+    its.p = bary.x() * p0 + bary.y() * p1 + bary.z() * p2;
+
+    /* Compute proper texture coordinates if provided by the mesh */
+    if (m_UV.size() > 0)
+        its.uv = bary.x() * m_UV.col(idx0) +
+                 bary.y() * m_UV.col(idx1) +
+                 bary.z() * m_UV.col(idx2);
+
+    /* Compute the geometry frame */
+    its.geoFrame = Frame((p1-p0).cross(p2-p0).normalized());
+
+    if (m_N.size() > 0) {
+        /* Compute the shading frame. Note that for simplicity,
+           the current implementation doesn't attempt to provide
+           tangents that are continuous across the surface. That
+           means that this code will need to be modified to be able
+           use anisotropic BRDFs, which need tangent continuity */
+
+        its.shFrame = Frame(
+                (bary.x() * m_N.col(idx0) +
+                 bary.y() * m_N.col(idx1) +
+                 bary.z() * m_N.col(idx2)).normalized());
+    } else {
+        its.shFrame = its.geoFrame;
+    }
+}
+
 BoundingBox3f Mesh::getBoundingBox(n_UINT index) const {
     BoundingBox3f result(m_V.col(m_F(0, index)));
     result.expandBy(m_V.col(m_F(1, index)));
@@ -156,86 +195,12 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
     return;	
 }
 
-void Mesh::samplePositionSimple(const Point2f &sample, Point3f &p, Normal3f &n) const {
-    Point2f new_sample = sample;
-    //get a random face
-    size_t faceIndex = m_pdf.sampleReuse(new_sample(0));
-
-
-    // sample the triangle of the face
-    Point2f uv = Warp::squareToUniformTriangle(new_sample);
-
-    //get the vertex index
-    uint32_t i0 = m_F(0, faceIndex), i1 = m_F(1, faceIndex), i2 = m_F(2, faceIndex);
-
-    //get the points
-    Point3f p0 = m_V.col(i0), p1 = m_V.col(i1), p2 = m_V.col(i2);
-
-    //compute the edge vectors
-    Vector3f edge1 = (p1 - p0);
-    Vector3f edge2 =  (p2 - p0);
-    Vector3f e1 = uv(0) * edge1;
-    Vector3f e2 = uv(1) * edge2;
-
-    //compute the new point
-    p = p0 + e1 + e2;
-
-    //compute the normal base on baycentric coordinates
-    //get the vertex normals
-    if(m_N.cols() > 3) {
-        Normal3f n0 = m_N.col(i0), n1 = m_N.col(i1), n2 = m_N.col(i2);
-        Vector3f w0 = p0 - p;
-        Vector3f w1 = p1 - p;
-        Vector3f w2 = p2 - p;
-
-        float area = (edge1.cross(edge2)).norm();
-        if(area != 0.0f){
-            float u = (w0.cross(w1)).norm() / area;
-            float v = (w1.cross(w2)).norm() / area;
-
-            n = (1.0f - u - v) * n0 + v * n1 + u * n2;
-            n.normalized();
-
-        } else {
-            n = (e1.cross(e2)).normalized();
-
-        }
-    } else {
-        //no normals provided
-        n = (e1.cross(e2)).normalized();
-        if(isnan(n.sum())){
-            cout << "Normal is nan" << endl;
-            cout << "e1 " << e1 << endl;
-            cout << "e2 " << e2 << endl;
-        }
-    }
-
-
-
-
-    //n = uv(0) * n0 + uv(1) * n1 + (1.0f - uv(0) - uv(1)) * n2;
-
-}
-
 /// Return the surface area of the given triangle
 float Mesh::pdf(const Point3f &p) const
 {
     float meshArea = m_pdf.getNormalization();
 	
 	return meshArea;
-}
-
-float Mesh::Pdf(const Point3f &p, const Point3f &hitP, const Normal3f &n, const Vector3f &wi) const {
-    float distSquared = (hitP - p).squaredNorm();
-
-    float AbsDot = std::abs(n.dot(- wi));
-
-
-    if(AbsDot != 0.0f && m_surfaceArea != 0.0f) {
-        return distSquared / (AbsDot * m_surfaceArea);
-    } else {
-        return 0.0f;
-    }
 }
 
 
