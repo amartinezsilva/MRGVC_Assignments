@@ -80,9 +80,11 @@ public:
             Eigen::Translation<float, 3>(-1.0f, -1.0f/aspect, 0.0f) * perspective).inverse();
 
         /* If no reconstruction filter was assigned, instantiate a Gaussian filter */
-        if (!m_rfilter)
+        if (!m_rfilter) {
             m_rfilter = static_cast<ReconstructionFilter *>(
                 NoriObjectFactory::createInstance("gaussian", PropertyList()));
+            m_rfilter->activate();
+        }
     }
 
     Color3f sampleRay(Ray3f &ray,
@@ -103,6 +105,7 @@ public:
         ray.d = m_cameraToWorld * d;
         ray.mint = m_nearClip * invZ;
         ray.maxt = m_farClip * invZ;
+        ray.medium = this->getMedium();
         ray.update();
 
         return Color3f(1.0f);
@@ -114,6 +117,13 @@ public:
                 if (m_rfilter)
                     throw NoriException("Camera: tried to register multiple reconstruction filters!");
                 m_rfilter = static_cast<ReconstructionFilter *>(obj);
+                break;
+
+            case EMedium:
+                if (m_medium)
+                    throw NoriException(
+                        "Camera: tried to register multiple medium instances!");
+                m_medium = static_cast<Medium *>(obj);
                 break;
 
             default:
@@ -137,7 +147,8 @@ public:
             m_fov,
             m_nearClip,
             m_farClip,
-            indent(m_rfilter->toString())
+            indent(m_rfilter->toString()),
+            m_medium ? indent(m_medium->toString()) : std::string("null")
         );
     }
 private:
