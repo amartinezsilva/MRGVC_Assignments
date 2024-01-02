@@ -114,7 +114,7 @@ add_executable(nori
   src/medium.cpp
   src/henyey_greenstein.cpp
   src/dof_camera.cpp
-  #src/path_vol.cpp
+  src/volpath.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

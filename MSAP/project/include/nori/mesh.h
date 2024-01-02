@@ -67,6 +67,8 @@ struct Intersection {
 
     /// Return a human-readable summary of the intersection record
     std::string toString() const;
+
+    bool isSurfaceIteraction = false;
 };
 
 /**
@@ -172,6 +174,9 @@ public:
     /// Return a pointer to the BSDF associated with this mesh
     const BSDF *getBSDF() const { return m_bsdf; }
 
+        /// Return the attached medium interface
+    const MediumInterface getMediumInterface() const { return m_mediumInterface; }
+
     /// Register a child object (e.g. a BSDF) with the mesh
     virtual void addChild(NoriObject *child, const std::string& name = "none");
 
@@ -204,6 +209,7 @@ protected:
     BoundingBox3f m_bbox;                ///< Bounding box of the mesh
     DiscretePDF  m_pdf;                  ///< Discrete pdf for sampling triangles uniformly wrt their area. 
     Medium *m_medium = nullptr;          ///< medium inside the mesh
+    MediumInterface m_mediumInterface; ///< Media on both sides
 };
 
 NORI_NAMESPACE_END

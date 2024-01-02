@@ -28,7 +28,7 @@ NORI_NAMESPACE_BEGIN
  * \brief Convenience data structure used to pass multiple
  * parameters to the evaluation and sampling routines in \ref BSDF
  */
-struct PhaseFunctionQueryRecord {
+struct PhaseQueryRecord {
     /// Incident direction (in the local frame)
     Vector3f wi;
 
@@ -38,13 +38,13 @@ struct PhaseFunctionQueryRecord {
     /// Measure associated with the sample
     EMeasure measure;
 
-    PhaseFunctionQueryRecord() { }
+    PhaseQueryRecord() { }
     /// Create a new record for sampling the phase function
-    PhaseFunctionQueryRecord(const Vector3f &wi)
+    PhaseQueryRecord(const Vector3f &wi)
         : wi(wi){ }
 
     /// Create a new record for querying the phase function
-    PhaseFunctionQueryRecord(const Vector3f &wi,
+    PhaseQueryRecord(const Vector3f &wi,
             const Vector3f &wo)
         : wi(wi), wo(wo) { }
 };
@@ -55,10 +55,10 @@ public:
     virtual ~PhaseFunction() { }
 
 
-    virtual float sample(PhaseFunctionQueryRecord &bRec, const Point2f &sample) const = 0;
+    virtual float sample(PhaseQueryRecord &bRec, const Point2f &sample) const = 0;
 
 
-    virtual float pdf(PhaseFunctionQueryRecord &bRec) const = 0;
+    virtual float pdf(PhaseQueryRecord &bRec) const = 0;
 
     EClassType getClassType() const { return EPhaseFunction; }
 

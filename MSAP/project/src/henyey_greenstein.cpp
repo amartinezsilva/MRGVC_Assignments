@@ -34,7 +34,7 @@ public:
 
 
     /// Compute the density of \ref sample() wrt. solid angles
-    float pdf(PhaseFunctionQueryRecord &pRec) const {
+    float pdf(PhaseQueryRecord &pRec) const {
 
         float sqrtFrac = 1.0f + m_g * m_g + 2.0f * m_g * pRec.wi.dot(pRec.wo);
         float pdf =  INV_FOURPI * ((1.0f - m_g * m_g) / pow(sqrtFrac, 1.5f));
@@ -43,7 +43,7 @@ public:
     }
 
     /// Draw a a sample from the BRDF model
-    float sample(PhaseFunctionQueryRecord &pRec, const Point2f &sample) const {
+    float sample(PhaseQueryRecord &pRec, const Point2f &sample) const {
         
         float costheta;
         if(abs(m_g) <= Epsilon){
