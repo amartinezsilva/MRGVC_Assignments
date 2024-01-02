@@ -59,6 +59,8 @@
 #include <iostream>
 #include <fstream>
 
+#include <Eigen/Eigen>
+
 using namespace std::chrono;
 using namespace std::chrono_literals;
 using namespace px4_msgs::msg;
@@ -67,10 +69,16 @@ class OffboardControl : public rclcpp::Node {
 
 	float min_interp_distance_ = 0.1;
 	float minimum_distance_ = 0.25;
-	std::vector<std::vector<double>> Goal_;
+	float look_ahead_ = 2.0;
+	float c1_ = 0.6321, c2_ = 0.3679;
+	std::vector<std::vector<double>> Goal_, prevGoal_;
 	std::vector<std::vector<double>> targets_;
 	std::ifstream inFile;
 	int currentTarget = 0; //index with the next target to reach
+	TrajectorySetpoint prev_setpoint_{};
+	TrajectorySetpoint prev_filtered_setpoint_{};
+	TiltingMcDesiredAngles prev_tilt_setpoint_{};
+	TiltingMcDesiredAngles prev_filtered_tilt_setpoint_{};
 
 
 public:
@@ -107,7 +115,7 @@ public:
 			this->create_subscription<px4_msgs::msg::VehicleOdometry>("/fmu/vehicle_odometry/out", 10,
 				[this](const px4_msgs::msg::VehicleOdometry::UniquePtr msg) {
 					
-					std::cout << "x: " << msg->x << "y: " << msg->y << "z: " << msg->z  << std::endl;
+					std::cout << "x: " << msg->x << " y: " << msg->y << " z: " << msg->z  << std::endl;
 					
 					float q[4];
 					for (int i = 0; i < 4; ++i) {
@@ -203,10 +211,18 @@ public:
 			std::cout << "Couldn't open file\n";
 		}
 
+		// Calculate total distance
+        int total_distance = 0;
+        for (int i = 0; i < list_x.size() - 1; i++) {
+			Eigen::Vector3f point_1, point_2;
+            point_1 = Eigen::Vector3f(list_x[i], list_y[i], list_z[i]);
+            point_2 = Eigen::Vector3f(list_x[i + 1], list_y[i + 1], list_z[i + 1]);
+            total_distance = total_distance + (point_2 - point_1).norm();
+        }
 
 		//Perform interpolation
-		int new_path_size = 1000;
-		std::cout << "Requesting interpolation of: " << new_path_size << "waypoints" << std::endl;
+		int new_path_size = int(total_distance/min_interp_distance_);
+		std::cout << "Requesting interpolation of: " << new_path_size << " waypoints" << std::endl;
 
 		std::vector<double> x_interp =  interpWaypointList(list_x, new_path_size);
 		std::vector<double> y_interp =  interpWaypointList(list_y, new_path_size);
@@ -261,7 +277,6 @@ public:
         Goal_[1][1] = first_target.at(4);
         Goal_[1][2] = first_target.at(5);
 
-
 		offboard_setpoint_counter_ = 0;
 
 		auto timer_callback = [this]() -> void {
@@ -308,7 +323,7 @@ private:
 	float_t distance_to_goal_;
 
 	void publish_offboard_control_mode() const;
-	void publish_trajectory_setpoint() const;
+	void publish_trajectory_setpoint() ;
 	void publish_tilt_setpoint() const;
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0,
 				     float param2 = 0.0) const;
@@ -321,6 +336,7 @@ private:
 	int nearestNeighbourIndex(std::vector<double> &_x, double &_value) const;
 	std::vector<double> linealInterp1(std::vector<double> &_x, std::vector<double> &_y, std::vector<double> &_x_new) const;
 	std::vector<double> interpWaypointList(std::vector<double> &_list_pose_axis, int _amount_of_points) const;
+	int calculatePosLookAhead(int _pos_on_path) const;
 };
 
 /**
@@ -355,6 +371,7 @@ void OffboardControl::publish_offboard_control_mode() const {
 	msg.body_rate = false;
 
 	offboard_control_mode_publisher_->publish(msg);
+
 }
 
 
@@ -363,7 +380,7 @@ void OffboardControl::publish_offboard_control_mode() const {
  *        For this example, it sends a trajectory setpoint to make the
  *        vehicle hover at 5 meters with a yaw angle of 180 degrees.
  */
-void OffboardControl::publish_trajectory_setpoint() const {
+void OffboardControl::publish_trajectory_setpoint() {
 	TrajectorySetpoint msg{};
 	msg.timestamp = timestamp_.load();
 	msg.x = Goal_[0][0];
@@ -372,6 +389,18 @@ void OffboardControl::publish_trajectory_setpoint() const {
 	msg.yaw = degreesToRadians(Goal_[1][2]); // [-PI:PI]
 
 	trajectory_setpoint_publisher_->publish(msg);
+
+	// //First order filter
+	// TrajectorySetpoint filtered_msg = msg;
+
+	// filtered_msg.x = c1_*prev_setpoint_.x + c2_*prev_filtered_setpoint_.x;
+	// filtered_msg.y = c1_*prev_setpoint_.y + c2_*prev_filtered_setpoint_.y;
+	// filtered_msg.z = c1_*prev_setpoint_.z + c2_*prev_filtered_setpoint_.z;
+	// filtered_msg.yaw = c1_*prev_setpoint_.yaw + c2_*prev_filtered_setpoint_.yaw;
+
+	// trajectory_setpoint_publisher_->publish(filtered_msg);
+	// prev_setpoint_ = msg;
+	// prev_filtered_setpoint_ = filtered_msg;
 }
 
 /**
@@ -540,6 +569,24 @@ std::vector<double> OffboardControl::interpWaypointList(std::vector<double> &_li
 //     }
 //     return interp1_path;
 // }
+
+int OffboardControl::calculatePosLookAhead(int _pos_on_path) const {
+    int pos_look_ahead;
+    std::vector<double> vec_distances;
+    double temp_dist = 0.0;
+    for (_pos_on_path; _pos_on_path < targets_.size() - 1; _pos_on_path++) {
+        Eigen::Vector3f p1 = Eigen::Vector3f(targets_.at(_pos_on_path).at(0),targets_.at(_pos_on_path).at(1), targets_.at(_pos_on_path).at(2));
+        Eigen::Vector3f p2 = Eigen::Vector3f(targets_.at(_pos_on_path + 1).at(0), targets_.at(_pos_on_path + 1).at(1), targets_.at(_pos_on_path + 1).at(2));
+        temp_dist = temp_dist + (p2 - p1).norm();
+        if (temp_dist < look_ahead_) {
+            pos_look_ahead = _pos_on_path;
+        } else {
+            _pos_on_path = targets_.size();
+        }
+    }
+
+    return pos_look_ahead;
+}
 
 int main(int argc, char* argv[]) {
 
