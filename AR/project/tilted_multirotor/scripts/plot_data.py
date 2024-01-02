@@ -74,6 +74,8 @@ def plot_pose_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experimen
 
     plt.show()
 
+    plt.savefig('pose_3D.png', bbox_inches='tight')
+
 def plot_velocity_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experiment):
     
 
@@ -108,6 +110,8 @@ def plot_velocity_temporal_evolution(df_ref, df_experiment, cols_ref, cols_exper
 
 
     plt.show()
+    plt.savefig('velocity.png', bbox_inches='tight')
+
 
 def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_ref_rp, cols_ref_yaw, cols_experiment):
     
@@ -146,6 +150,7 @@ def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_
 
 
     plt.show() 
+    plt.savefig('pose.png', bbox_inches='tight')
 
 def plot_experiment_data(path_interp, path_experiment_data):
 
