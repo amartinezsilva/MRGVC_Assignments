@@ -114,6 +114,7 @@ add_executable(nori
   src/medium.cpp
   src/henyey_greenstein.cpp
   src/dof_camera.cpp
+  src/sphere.cpp
   src/volpath.cpp
 )
 

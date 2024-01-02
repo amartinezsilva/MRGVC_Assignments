@@ -222,15 +222,11 @@ void Mesh::addChild(NoriObject *obj, const std::string& name) {
             }
             break;
 
-        case EMedium: {
-
-            Medium *media = static_cast<Medium *>(obj);
-            if (m_medium)
-                throw NoriException(
-                    "Mesh: tried to register multiple medium instances!");
-            m_medium = media;
-
-            }
+        case EMedium:
+            if (!m_mediumInterface.inside)
+                m_mediumInterface.inside = static_cast<Medium *>(obj);
+            else if (!m_mediumInterface.outside)
+                m_mediumInterface.outside = static_cast<Medium *>(obj);
             break;
 
         default:
