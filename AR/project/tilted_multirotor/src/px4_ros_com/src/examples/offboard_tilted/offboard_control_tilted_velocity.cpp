@@ -67,14 +67,17 @@ using namespace px4_msgs::msg;
 
 class OffboardControl : public rclcpp::Node {
 
-	float min_interp_distance_ = 0.1;
+	float min_interp_distance_ = 0.05;
 	float minimum_distance_ = 0.25;
-	float look_ahead_ = 2.0;
+	float look_ahead_ = 0.5;
+	int pos_look_ahead_ = 0;
 	float c1_ = 0.6321, c2_ = 0.3679;
 	std::vector<std::vector<double>> Goal_, prevGoal_;
 	std::vector<std::vector<double>> targets_;
 	std::ifstream inFile;
+	Eigen::Vector3f current_point_;
 	int currentTarget = 0; //index with the next target to reach
+	int prevTarget = 0;
 	TrajectorySetpoint prev_setpoint_{};
 	TrajectorySetpoint prev_filtered_setpoint_{};
 	TiltingMcDesiredAngles prev_tilt_setpoint_{};
@@ -115,55 +118,26 @@ public:
 			this->create_subscription<px4_msgs::msg::VehicleOdometry>("/fmu/vehicle_odometry/out", 10,
 				[this](const px4_msgs::msg::VehicleOdometry::UniquePtr msg) {
 					
-					std::cout << "x: " << msg->x << " y: " << msg->y << " z: " << msg->z  << std::endl;
-					
-					float q[4];
-					for (int i = 0; i < 4; ++i) {
-						q[i] = msg->q[i];
-					}
-					float roll, pitch, yaw;
-					quaternionToEulerAngles(q, roll, pitch, yaw);
-					float roll_degrees, pitch_degrees, yaw_degrees;
-					roll_degrees = radiansToDegrees(roll);
-					pitch_degrees = radiansToDegrees(pitch);
-					yaw_degrees = radiansToDegrees(yaw);
+					//std::cout << "x: " << msg->x << " y: " << msg->y << " z: " << msg->z  << std::endl;
+					// std::cout << "vx: " << msg->vx << " vy: " << msg->vy << " vz: " << msg->vz  << std::endl;
+		
+					// float q[4];
+					// for (int i = 0; i < 4; ++i) {
+					// 	q[i] = msg->q[i];
+					// }
+					// float roll, pitch, yaw;
+					// quaternionToEulerAngles(q, roll, pitch, yaw);
+					// float roll_degrees, pitch_degrees, yaw_degrees;
+					// roll_degrees = radiansToDegrees(roll);
+					// pitch_degrees = radiansToDegrees(pitch);
+					// yaw_degrees = radiansToDegrees(yaw);
 
-					std::cout << "roll(º): " << roll_degrees
-					<< "pitch(º): " << pitch_degrees
-					<< "yaw(º): " << yaw_degrees  << std::endl;
-
-					std::cout << "Roll desired: " << Goal_[1][0] << " degrees, "
-					<< "Pitch desired: " << Goal_[1][1] << " degrees, "
-					<< "Yaw desired:" << Goal_[1][2] << " degrees" << std::endl;
+					// std::cout << "roll(º): " << roll_degrees
+					// << "pitch(º): " << pitch_degrees
+					// << "yaw(º): " << yaw_degrees  << std::endl;
 
 					//Update control
-
-					float ex = Goal_[0][0] - msg->x;
-					float ey = Goal_[0][1] - msg->y;
-					float ez = Goal_[0][2] - msg->z;
-
-					float distance_to_target = sqrt(ex*ex + ey*ey + ez*ez);
-
-					std::cout << "distance to target: " << distance_to_target << std::endl;
-
-					if(distance_to_target < minimum_distance_) {
-						if (currentTarget == targets_.size() - 1){
-							printf("Final goal reached!");
-							return;
-						}
-
-						currentTarget++;
-
-						std::vector<double> target = targets_.at(currentTarget);
-
-						Goal_[0][0] = target.at(0);
-						Goal_[0][1] = target.at(1);
-						Goal_[0][2] = target.at(2);
-						Goal_[1][0] = target.at(3);
-						Goal_[1][1] = target.at(4);
-						Goal_[1][2] = target.at(5);
-
-					}
+					current_point_ = Eigen::Vector3f(msg->x, msg->y, msg->z);
 
 				});
 
@@ -324,7 +298,7 @@ private:
 
 	void publish_offboard_control_mode() const;
 	void publish_trajectory_setpoint() ;
-	void publish_tilt_setpoint() const;
+	void publish_tilt_setpoint() ;
 	void publish_vehicle_command(uint16_t command, float param1 = 0.0,
 				     float param2 = 0.0) const;
 	//angle conversion functions
@@ -337,6 +311,10 @@ private:
 	std::vector<double> linealInterp1(std::vector<double> &_x, std::vector<double> &_y, std::vector<double> &_x_new) const;
 	std::vector<double> interpWaypointList(std::vector<double> &_list_pose_axis, int _amount_of_points) const;
 	int calculatePosLookAhead(int _pos_on_path) const;
+	int calculatePosOnPath(Eigen::Vector3f &_current_point, double _search_range, int _prev_normal_pos_on_path) const;
+	int calculateDistanceOnPath(int _prev_normal_pos_on_path, double _meters) const;
+
+
 };
 
 /**
@@ -364,8 +342,8 @@ void OffboardControl::disarm() const {
 void OffboardControl::publish_offboard_control_mode() const {
 	OffboardControlMode msg{};
 	msg.timestamp = timestamp_.load();
-	msg.position = true;
-	msg.velocity = false;
+	msg.position = false;
+	msg.velocity = true;
 	msg.acceleration = false;
 	msg.attitude = false;
 	msg.body_rate = false;
@@ -381,26 +359,52 @@ void OffboardControl::publish_offboard_control_mode() const {
  *        vehicle hover at 5 meters with a yaw angle of 180 degrees.
  */
 void OffboardControl::publish_trajectory_setpoint() {
+
+
+	//Update control
+	currentTarget = calculatePosOnPath(current_point_, 2.0, prevTarget);
+	pos_look_ahead_ = calculatePosLookAhead(currentTarget);
+
+	std::cout << "current pos index: " << currentTarget << "look ahead index: " << pos_look_ahead_ << std::endl;
+	
+	Eigen::Vector3f target_p, unit_vec;
+	target_p = Eigen::Vector3f(targets_.at(pos_look_ahead_).at(0), targets_.at(pos_look_ahead_).at(1), targets_.at(pos_look_ahead_).at(2));
+    //double distance = (target_p - current_point_).norm();
+
+	unit_vec = target_p - current_point_;
+	unit_vec = unit_vec / unit_vec.norm();
+	float mod_vel = 0.5;
+
 	TrajectorySetpoint msg{};
 	msg.timestamp = timestamp_.load();
-	msg.x = Goal_[0][0];
-	msg.y = Goal_[0][1];
-	msg.z = Goal_[0][2];
-	msg.yaw = degreesToRadians(Goal_[1][2]); // [-PI:PI]
+	msg.x = NAN;
+	msg.y = NAN;
+	msg.z = NAN;
+	msg.vx = unit_vec(0) * mod_vel;
+	msg.vy = unit_vec(1) * mod_vel;
+	msg.vz = unit_vec(2) * mod_vel;
+	
+	//msg.yaw = NAN; // [-PI:PI]
+	msg.yaw = degreesToRadians(targets_.at(pos_look_ahead_).at(5)); // [-PI:PI]
+	//trajectory_setpoint_publisher_->publish(msg);
 
-	trajectory_setpoint_publisher_->publish(msg);
+	std::cout << "comm_vx: " << msg.vx << " comm_vy: " << msg.vy << " comm_vz: " << msg.vz  << std::endl;
 
-	// //First order filter
-	// TrajectorySetpoint filtered_msg = msg;
 
-	// filtered_msg.x = c1_*prev_setpoint_.x + c2_*prev_filtered_setpoint_.x;
-	// filtered_msg.y = c1_*prev_setpoint_.y + c2_*prev_filtered_setpoint_.y;
-	// filtered_msg.z = c1_*prev_setpoint_.z + c2_*prev_filtered_setpoint_.z;
-	// filtered_msg.yaw = c1_*prev_setpoint_.yaw + c2_*prev_filtered_setpoint_.yaw;
+	//First order filter
+	TrajectorySetpoint filtered_msg = msg;
 
-	// trajectory_setpoint_publisher_->publish(filtered_msg);
-	// prev_setpoint_ = msg;
-	// prev_filtered_setpoint_ = filtered_msg;
+	filtered_msg.vx = c1_*prev_setpoint_.vx + c2_*prev_filtered_setpoint_.vx;
+	filtered_msg.vy = c1_*prev_setpoint_.vy + c2_*prev_filtered_setpoint_.vy;
+	filtered_msg.vz = c1_*prev_setpoint_.vz + c2_*prev_filtered_setpoint_.vz;
+	filtered_msg.yaw = c1_*prev_setpoint_.yaw + c2_*prev_filtered_setpoint_.yaw;
+
+	trajectory_setpoint_publisher_->publish(filtered_msg);
+	prev_setpoint_ = msg;
+	prev_filtered_setpoint_ = filtered_msg;
+	
+	prevTarget = currentTarget;
+
 }
 
 /**
@@ -408,14 +412,26 @@ void OffboardControl::publish_trajectory_setpoint() {
  * 
  */
 
-void OffboardControl::publish_tilt_setpoint() const {
+void OffboardControl::publish_tilt_setpoint() {
 	TiltingMcDesiredAngles msg{};
 	msg.timestamp = timestamp_.load();
 
-	msg.roll_body = degreesToRadians(Goal_[1][0]);
-	msg.pitch_body = degreesToRadians(Goal_[1][1]);
+	std::vector<double> target = targets_.at(pos_look_ahead_);
 
-	tilt_angle_publisher_->publish(msg);
+	msg.roll_body = degreesToRadians(target.at(3));
+	msg.pitch_body = degreesToRadians(target.at(4));
+
+	//tilt_angle_publisher_->publish(msg);
+
+	//First order filter
+	TiltingMcDesiredAngles filtered_msg = msg;
+
+	filtered_msg.roll_body = c1_*prev_tilt_setpoint_.roll_body + c2_*prev_filtered_tilt_setpoint_.roll_body;
+	filtered_msg.pitch_body = c1_*prev_tilt_setpoint_.pitch_body + c2_*prev_filtered_tilt_setpoint_.pitch_body;
+
+	tilt_angle_publisher_->publish(filtered_msg);
+	prev_tilt_setpoint_ = msg;
+	prev_filtered_tilt_setpoint_ = filtered_msg;
 
 }
 
@@ -586,6 +602,68 @@ int OffboardControl::calculatePosLookAhead(int _pos_on_path) const {
     }
 
     return pos_look_ahead;
+}
+
+int OffboardControl::calculatePosOnPath(Eigen::Vector3f &_current_point, double _search_range, int _prev_normal_pos_on_path) const {
+    std::vector<double> vec_distances;
+    int start_search_pos_on_path = calculateDistanceOnPath(_prev_normal_pos_on_path, -_search_range);
+    int end_search_pos_on_path = calculateDistanceOnPath(_prev_normal_pos_on_path, _search_range);
+    for (int i = start_search_pos_on_path; i < end_search_pos_on_path; i++) {
+        Eigen::Vector3f target_path_point;
+        target_path_point = Eigen::Vector3f(targets_.at(i).at(0), targets_.at(i).at(1), targets_.at(i).at(2));
+        vec_distances.push_back((target_path_point - _current_point).norm());
+    }
+    auto smallest_distance = std::min_element(vec_distances.begin(), vec_distances.end());
+    int pos_on_path = smallest_distance - vec_distances.begin();
+
+    return pos_on_path + start_search_pos_on_path;
+}
+
+
+int OffboardControl::calculateDistanceOnPath(int _prev_normal_pos_on_path, double _meters) const{
+    int pos_equals_dist;
+    double dist_to_front, dist_to_back, temp_dist;
+    std::vector<double> vec_distances;
+    Eigen::Vector3f p_prev = Eigen::Vector3f(targets_.at(_prev_normal_pos_on_path).at(0), targets_.at(_prev_normal_pos_on_path).at(1), targets_.at(_prev_normal_pos_on_path).at(2));
+    Eigen::Vector3f p_front = Eigen::Vector3f(targets_.front().at(0), targets_.front().at(1), targets_.front().at(2));
+    Eigen::Vector3f p_back = Eigen::Vector3f(targets_.back().at(0), targets_.back().at(1), targets_.back().at(2));
+    dist_to_front = (p_prev - p_front).norm();
+    dist_to_back = (p_prev - p_back).norm();
+    temp_dist = 0.0;
+    if (_meters > 0) {
+        if (_meters < dist_to_back) {
+            for (int i = _prev_normal_pos_on_path; i < targets_.size() - 1; i++) {
+                Eigen::Vector3f p1 = Eigen::Vector3f(targets_.at(i).at(0), targets_.at(i).at(1), targets_.at(i).at(2));
+                Eigen::Vector3f p2 = Eigen::Vector3f(targets_.at(i+1).at(0), targets_.at(i+1).at(1), targets_.at(i+1).at(2));
+                temp_dist = temp_dist + (p2 - p1).norm();
+                if (temp_dist < _meters) {
+                    pos_equals_dist = i;
+                } else {
+                    i = targets_.size();
+                }
+            }
+        } else {
+            pos_equals_dist = targets_.size() - 1;
+        }
+    } else {
+        if (_meters < dist_to_front) {
+            pos_equals_dist = 0;
+            for (int i = _prev_normal_pos_on_path; i >= 1; i--) {
+                Eigen::Vector3f p1 = Eigen::Vector3f(targets_.at(i).at(0), targets_.at(i).at(1), targets_.at(i).at(2));
+                Eigen::Vector3f p0 = Eigen::Vector3f(targets_.at(i-1).at(0), targets_.at(i-1).at(1), targets_.at(i-1).at(2));
+                temp_dist = temp_dist + (p1 - p0).norm();
+                if (temp_dist < fabs(_meters / 2)) {
+                    pos_equals_dist = i;
+                } else {
+                    i = 0;
+                }
+            }
+        } else {
+            pos_equals_dist = 0;
+        }
+    }
+
+    return pos_equals_dist;
 }
 
 int main(int argc, char* argv[]) {
