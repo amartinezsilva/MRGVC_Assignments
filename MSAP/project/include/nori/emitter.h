@@ -83,45 +83,6 @@ struct EmitterQueryRecord {
 	std::string toString() const;
 };
 
-struct VisibilityTester {
-    Ray3f r;
-    /**
-     * @brief SetSegment the the ray
-     * @param p1 the first point of the ray (origin)
-     * @param eps1 a offset value for the first point
-     * @param p2 the second point of the ray
-     * @param eps2 a offset value for the second point
-     */
-    void SetSegment(const Point3f &p1, float eps1,
-                    const Point3f &p2, float eps2 /*, float time*/) {
-        //calculate the direction
-        Vector3f d = (p2 - p1);
-
-        //calculate the distance
-        float dist = (p2 - p1).norm();
-
-        //create the ray segment
-        r = Ray3f(p1, d / dist, eps1 , dist * (1.f - eps2)); /*, time);*/
-    }
-
-    /**
-     * @brief SetRay create a ray for the VisibilityTester
-     * @param p the origin
-     * @param w the direction (should be normalized)
-     */
-    void SetRay(const Point3f &p, const Vector3f &w/* , float eps, float time*/) {
-        r = Ray3f(p, w);
-    }
-    /**
-     * @brief Unoccluded check if the origin is visible
-     * @param scene the current scene
-     * @return true if the the point is not occluded
-     */
-    // bool Unoccluded(const Scene *scene) const {
-    //     return !scene->rayIntersect(r);
-    // }
-};
-
 
 /**
  * \brief Superclass of all emitters
@@ -165,6 +126,9 @@ public:
      *     The emitter value, evaluated for each color channel
      */
     virtual Color3f eval(const EmitterQueryRecord &lRec) const = 0;
+
+    /// Infinity light source flag
+    virtual bool isInfinity() const {return false;}
 
     /**
      * \brief Virtual destructor

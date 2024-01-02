@@ -15,9 +15,12 @@ public:
 			"PointEmitter[\n"
 			"  position = %s,\n"
 			"  radiance = %s,\n"
+			"  medium = %s\n"
 			"]",
 			m_position.toString(),
-			m_radiance.toString());
+			m_radiance.toString(),
+			m_medium ? indent(m_medium->toString()) : std::string("null")
+        );
 	}
 
 	virtual Color3f eval(const EmitterQueryRecord & lRec) const {

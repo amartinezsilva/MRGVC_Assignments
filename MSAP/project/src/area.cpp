@@ -39,8 +39,12 @@ public:
 			"AreaLight[\n"
 			"  radiance = %s,\n"
 			"  scale = %f,\n"
+			"  medium = %s,\n"
 			"]",
-			m_radiance->toString(), m_scale);
+			m_radiance->toString(), 
+			m_scale,
+			m_medium ? indent(m_medium->toString()) : std::string("null")
+            );
 	}
 
 	// We don't assume anything about the visibility of points specified in 'ref' and 'p' in the EmitterQueryRecord.
