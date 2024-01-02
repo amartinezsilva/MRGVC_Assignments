@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 
 <scene>
-	<integrator type="path_vol"/>
+	<integrator type="volpath"/>
 
 	<camera type="perspective">
 		<float name="fov" value="27.7856"/>

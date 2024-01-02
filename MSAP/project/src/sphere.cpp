@@ -69,18 +69,16 @@ public:
         its.mesh = this;
     }
 
-    void samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
-    {
+    void sampleSurface(ShapeQueryRecord & sRec, const Point2f & sample) const {
         Vector3f q = Warp::squareToUniformSphere(sample);
-        p = m_position + m_radius * q;
-        n = q;
-        //sRec.pdf = std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
-    }
-    float pdf(const Point3f &p) const
-    {
-        return std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
+        sRec.p = m_position + m_radius * q;
+        sRec.n = q;
+        sRec.pdf = std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
     }
 
+    float pdfSurface(const ShapeQueryRecord & sRec) const {
+        return std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
+    }
 
     std::string toString() const {
         return tfm::format(

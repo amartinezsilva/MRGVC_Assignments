@@ -72,6 +72,29 @@ struct Intersection {
 };
 
 /**
+ * \brief Data record for conveniently querying and sampling the
+ * a point on a shape
+ */
+struct ShapeQueryRecord {
+    /// Reference point
+    Point3f ref;
+    /// Sampled point
+    Point3f p;
+    /// Sampled normal
+    Normal3f n;
+    /// Probability of the sample
+    float pdf;
+
+    /// Empty constructor
+    ShapeQueryRecord() {}
+    /// Data structure with ref to call sampleSurface()
+    ShapeQueryRecord(const Point3f & ref_) : ref(ref_) {}
+    /// Data structure with ref and p to call pdfSurface()
+    ShapeQueryRecord(const Point3f & ref_, const Point3f & p_) : ref(ref_), p(p_) {}
+
+};
+
+/**
  * \brief Triangle mesh
  *
  * This class stores a triangle mesh object and provides numerous functions
@@ -104,6 +127,18 @@ public:
 
     /// Return the surface area of the given triangle
     float surfaceArea(n_UINT index) const;
+
+    /**
+     * \brief Sample a point on the surface (potentially using the point sRec.ref to importance sample)
+     * This method should set sRec.p, sRec.n and sRec.pdf
+     * Probability should be with respect to area
+     * */
+    void sampleSurface(ShapeQueryRecord & sRec, const Point2f & sample) const;
+    /**
+     * \brief Return the probability of sampling a point sRec.p by the sampleSurface() method (sRec.ref should be set before)
+     * sRec.n and sRec.pdf are ignored
+     * */
+    float pdfSurface(const ShapeQueryRecord & sRec) const;
 
     //// Return an axis-aligned bounding box of the entire mesh
     const BoundingBox3f &getBoundingBox() const { return m_bbox; }

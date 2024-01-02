@@ -26,8 +26,7 @@ public:
 
         /* Emiiter sampling */
 		EmitterQueryRecord lRec(its.p);
-		float pdflight;
-		const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), pdflight);
+		const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), lightPdf);
 		Color3f Le = random_emitter->sample(lRec, sampler->next2D(), 0.);
         if (its.isSurfaceIteraction) // surface interaction
         {
@@ -36,12 +35,11 @@ public:
             scatteringPdf = its.mesh->getBSDF()->pdf(bRec);
 
             Color3f Tr(0.f);
-            Ray3f shadowRay(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
-            if (shadowRay.medium)
-                Tr = shadowRay.medium->Tr(shadowRay);
+            if (lRec.shadowRay.medium)
+                Tr = lRec.shadowRay.medium->Tr(lRec.shadowRay);
             else
                 Tr = Color3f(1.f);
-            if (!scene->rayIntersect(shadowRay, its_2))
+            if (!scene->rayIntersect(lRec.shadowRay, its_2))
             {
                 if (random_emitter->isDelta())
                     L += Tr * beta * Le;
@@ -61,12 +59,11 @@ public:
             beta = Color3f(scatteringPdf);
             beta = Color3f(1.f);
             Color3f Tr(0.f);
-            Ray3f shadowRay(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
-            if (shadowRay.medium)
-                Tr = shadowRay.medium->Tr(shadowRay);
+            if (lRec.shadowRay.medium)
+                Tr = lRec.shadowRay.medium->Tr(lRec.shadowRay);
             else
                 Tr = Color3f(1.f);
-            if (!scene->rayIntersect(shadowRay, its_2))
+            if (!scene->rayIntersect(lRec.shadowRay, its_2))
             {
                 if (random_emitter->isDelta())
                     L += Tr * beta * Le;
@@ -93,13 +90,11 @@ public:
                 {
                     shadowRay.maxt = (its_2.p - shadowRay.o).norm();
                     Color3f Tr(0.f);
-                    Ray3f shadowRayEmitter(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
-                    if (shadowRayEmitter.medium)
-                        Tr = shadowRay.medium->Tr(shadowRayEmitter);  
+                    if (lRec.shadowRay.medium)
+                        Tr = shadowRay.medium->Tr(lRec.shadowRay);  
                     else
                         Tr = Color3f(1.f);
                     EmitterQueryRecord lRec(mRec.p);
-                    lRec.wi = shadowRay.d;
 				    lRec.n = its_2.shFrame.n;
 				    lRec.dist = its_2.t;
 				    lRec.p = its_2.p;
@@ -145,13 +140,11 @@ public:
                 {
                     shadowRay.maxt = (its_2.p - shadowRay.o).norm();
                     Color3f Tr(0.f);
-                    Ray3f shadowRayEmitter(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
-                    if (shadowRayEmitter.medium)
-                        Tr = shadowRay.medium->Tr(shadowRayEmitter);  
+                    if (lRec.shadowRay.medium)
+                        Tr = shadowRay.medium->Tr(lRec.shadowRay);  
                     else
                         Tr = Color3f(1.f);
                     EmitterQueryRecord pRec(mRec.p);
-                    pRec.wi = shadowRay.d;
 				    pRec.n = its_2.shFrame.n;
 				    pRec.dist = its_2.t;
 				    pRec.p = its_2.p;
@@ -216,7 +209,6 @@ public:
                         {
                             auto emitter = its.mesh->getEmitter();
                             EmitterQueryRecord lRec(ray_s.o);
-                            lRec.wi = ray_s.d;
                             lRec.n = its.shFrame.n;
                             lRec.dist = its.t;
                             lRec.p = its.p;

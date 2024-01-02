@@ -203,6 +203,19 @@ float Mesh::pdf(const Point3f &p) const
 	return meshArea;
 }
 
+void Mesh::sampleSurface(ShapeQueryRecord & sRec, const Point2f & sample) const {
+    // Vector3f q = Warp::squareToUniformSphere(sample);
+    // sRec.p = m_position + m_radius * q;
+    // sRec.n = q;
+    // sRec.pdf = std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
+    return;
+}
+
+float Mesh::pdfSurface(const ShapeQueryRecord & sRec) const {
+    // return std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
+    return 0.0;
+}
+
 
 void Mesh::addChild(NoriObject *obj, const std::string& name) {
     switch (obj->getClassType()) {
