@@ -54,6 +54,8 @@ public:
         return Color3f(1.0f);
     }
 
+    virtual bool isDelta() const override{ return true; }
+
     std::string toString() const {
         return "Mirror[]";
     }
