@@ -16,8 +16,7 @@
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
 
-#if !defined(__NORI_VECTOR_H)
-#define __NORI_VECTOR_H
+#pragma once
 
 #include <nori/common.h>
 
@@ -168,6 +167,3 @@ public:
 extern void coordinateSystem(const Vector3f &a, Vector3f &b, Vector3f &c);
 
 NORI_NAMESPACE_END
-
-#endif /* __NORI_VECTOR_H */
-

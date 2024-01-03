@@ -6,37 +6,34 @@ NORI_NAMESPACE_BEGIN
 class HomogeneousMedium : public Medium {
 public:
     HomogeneousMedium   (const PropertyList &propList) {
-        m_sigma_a = propList.getColor("sigma_a", 0.5f);
-        m_sigma_s = propList.getColor("sigma_s", 0.5f);
-        m_sigma_t = m_sigma_a + m_sigma_s;
+        m_sigmaA = propList.getColor("sigmaA", Color3f(0.5f));
+        m_sigmaS = propList.getColor("sigmaS", Color3f(0.5f));
+        m_sigmaT = m_sigmaA + m_sigmaS;
     }
 
     Color3f sample(const Ray3f &ray, const Point2f &sample, MediumInteraction &mRec) const {
-        // Sample a channel and distance along the ray
-        const int N_CHANNELS = 3;
-        int channel = std::min(int(sample.x() * N_CHANNELS), N_CHANNELS - 1);
-        float dist = -std::log(1 - sample.y()) / m_sigma_t(channel);
+        
+        // Sample one of the three channels and distance along the ray
+        int channel = std::min(int(sample.x() * 3), 3 - 1);
+        float dist = -std::log(1 - sample.y()) / m_sigmaT(channel);
         float t = std::min(dist * ray.d.norm(), ray.maxt);
-        // cout << "t " << t << endl;
-        bool sampleMedium = t < ray.maxt;
-        // cout << "maxt " << ray.maxt << endl;
-        if (sampleMedium)
+        bool sampleMediumSuccess = t < ray.maxt;
+        if (sampleMediumSuccess)
             mRec = MediumInteraction(ray(t), t, -(ray.d).normalized(), this->getPhaseFunction(), this);
 
         // Compute the trasmittance and sampling density
-        Color3f Tr = exp(- m_sigma_t * std::min(t, MAXFLOAT) * ray.d.norm());
+        Color3f Tr = exp(- m_sigmaT * std::min(t, INFINITY) * ray.d.norm()); //INFINITY OR MAXFLOAT
             
-
         // Return weighting factor for scattering from homogeneous medium
-        Color3f density = sampleMedium ? (m_sigma_t * Tr) : Tr;
+        Color3f density = sampleMediumSuccess ? (m_sigmaT * Tr) : Tr;
         float pdf = 0;
-        for (int i = 0; i < N_CHANNELS; i++)
+        for (int i = 0; i < 3; i++)
             pdf += density(i);
-        pdf *= 1.f / N_CHANNELS;
-        if (sampleMedium)
-            return Tr * m_sigma_s / pdf;
-        else 
-            return Tr / pdf ;        
+        pdf *= 1.f / 3;
+        
+        if (sampleMediumSuccess) Tr *= m_sigmaS;
+
+        return Tr / pdf;        
     }
 
     /**
@@ -44,25 +41,25 @@ public:
      *
      */
     Color3f Tr(const Ray3f &ray) const {
-        return exp(- m_sigma_t * std::min(ray.maxt, MAXFLOAT));
+        float d = std::min(ray.maxt, INFINITY); // MAXFLOAT or INFINITY
+        return exp(- m_sigmaT * d);
     }
 
     /// Return a string representation
     std::string toString() const {
         return tfm::format(
-            "HomogeneousMedium[\n"
-            "  sigma_a = %s,\n"
-            "  sigma_s = %s,\n"
-            "  sigma_t = %s,\n"
-            "]",
-            m_sigma_a.toString(),
-            m_sigma_s.toString(),
-            m_sigma_t.toString()
-        );
+                    "HomogeneousMedium[\n"
+                    "  sigmaA = %s,\n"
+                    "  sigmaS = %s,\n"
+                    "  sigmaT = %s,\n"
+                    "]",
+                    m_sigmaA.toString(),
+                    m_sigmaS.toString(),
+                    m_sigmaT.toString());
     }
 
 private:
-    Color3f m_sigma_a, m_sigma_s, m_sigma_t;
+    Color3f m_sigmaA, m_sigmaS, m_sigmaT;
 };
 
 NORI_REGISTER_CLASS(HomogeneousMedium, "homogeneous");

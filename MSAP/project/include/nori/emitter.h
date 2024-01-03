@@ -61,9 +61,6 @@ struct EmitterQueryRecord {
     /// Distance between 'ref' and 'p'
     float dist;
 
-    /// Shadow ray
-    Ray3f shadowRay;
-
     /// Create an unitialized query record
     EmitterQueryRecord() : emitter(nullptr) { }
 
@@ -133,8 +130,6 @@ public:
     /// Infinity light source flag
     virtual bool isInfinity() const {return false;}
 
-	bool isDelta() const { return false; }
-
     /**
      * \brief Virtual destructor
      * */
@@ -153,6 +148,7 @@ public:
 
 	EmitterType getEmitterType() const { return m_type; }
 
+	bool isDelta() const { return m_type == EmitterType::EMITTER_POINT; }
 
     virtual void addChild(NoriObject *obj, const std::string& name = "none") override
     {

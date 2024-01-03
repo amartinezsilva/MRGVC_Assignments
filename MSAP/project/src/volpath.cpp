@@ -25,11 +25,9 @@ public:
         Intersection its_2;
 
         /* Emiiter sampling */
-		auto emitter = scene->getRandomEmitter(sampler->next1D());
-        int n_emitters = scene->getLights().size();
-        EmitterQueryRecord lRec(mRec.p);
-        Color3f Le = emitter->sample(lRec, sampler->next2D(), 0.);
-        lightPdf = emitter->pdf(lRec);
+		EmitterQueryRecord lRec(its.p);
+		const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), lightPdf);
+		Color3f Le = random_emitter->sample(lRec, sampler->next2D(), 0.);
         if (its.isSurfaceIteraction) // surface interaction
         {
             BSDFQueryRecord bRec(its.toLocal(mRec.wi), its.toLocal(lRec.wi), its.uv, its.mesh->getBSDF()->isDelta()? EDiscrete :ESolidAngle);
@@ -37,21 +35,22 @@ public:
             scatteringPdf = its.mesh->getBSDF()->pdf(bRec);
 
             Color3f Tr(0.f);
-            if (lRec.shadowRay.medium)
-                Tr = lRec.shadowRay.medium->Tr(lRec.shadowRay);
+            Ray3f shadowRay(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
+            if (shadowRay.medium)
+                Tr = shadowRay.medium->Tr(shadowRay);
             else
                 Tr = Color3f(1.f);
-            if (!scene->rayIntersect(lRec.shadowRay, its_2))
+            if (!scene->rayIntersect(shadowRay, its_2))
             {
-                if (emitter->isDelta())
-                    L += n_emitters * Tr * beta * Le;
-                else if (emitter->isInfinity())
+                if (random_emitter->isDelta())
+                    L += Tr * beta * Le;
+                else if (random_emitter->isInfinity())
                 {
                     if (!mRec.medium && lightPdf + scatteringPdf > 1e-9)
-                        L += n_emitters * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
+                        L += beta * lightPdf / (lightPdf + scatteringPdf) * Le;
                 }
                 else if (lightPdf + scatteringPdf > 1e-9)
-                    L += n_emitters * Tr * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
+                    L += Tr * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
             }
         }
         else // medium interaction
@@ -61,16 +60,17 @@ public:
             beta = Color3f(scatteringPdf);
             beta = Color3f(1.f);
             Color3f Tr(0.f);
-            if (lRec.shadowRay.medium)
-                Tr = lRec.shadowRay.medium->Tr(lRec.shadowRay);
+            Ray3f shadowRay(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
+            if (shadowRay.medium)
+                Tr = shadowRay.medium->Tr(shadowRay);
             else
                 Tr = Color3f(1.f);
-            if (!scene->rayIntersect(lRec.shadowRay, its_2))
+            if (!scene->rayIntersect(shadowRay, its_2))
             {
-                if (emitter->isDelta())
-                    L += n_emitters * Tr * beta * Le;
-                else if (lightPdf + scatteringPdf > 1e-9 && !emitter->isInfinity())
-                    L += n_emitters * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
+                if (random_emitter->isDelta())
+                    L += Tr * beta * Le;
+                else if (lightPdf + scatteringPdf > 1e-9 && !random_emitter->isInfinity())
+                    L += beta * lightPdf / (lightPdf + scatteringPdf) * Le;
             }
         }
 
@@ -92,11 +92,13 @@ public:
                 {
                     shadowRay.maxt = (its_2.p - shadowRay.o).norm();
                     Color3f Tr(0.f);
-                    if (lRec.shadowRay.medium)
-                        Tr = shadowRay.medium->Tr(lRec.shadowRay);  
+                    Ray3f shadowRayEmitter(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
+                    if (shadowRayEmitter.medium)
+                        Tr = shadowRay.medium->Tr(shadowRayEmitter);  
                     else
                         Tr = Color3f(1.f);
                     EmitterQueryRecord lRec(mRec.p);
+                    lRec.wi = shadowRay.d;
 				    lRec.n = its_2.shFrame.n;
 				    lRec.dist = its_2.t;
 				    lRec.p = its_2.p;
@@ -104,7 +106,7 @@ public:
                     lightPdf = its_2.mesh->getEmitter()->pdf(lRec);
                     if (lightPdf + scatteringPdf > 1e-9)
                     {
-                        L += n_emitters * Tr * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(lRec);
+                        L += Tr * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(lRec);
                     }
                 }
             }
@@ -122,7 +124,7 @@ public:
                             lightPdf = emitter->pdf(lRec);
                             if (lightPdf + scatteringPdf > 1e-9)
                             {
-                                L += n_emitters * beta * scatteringPdf / (lightPdf + scatteringPdf) * emitter->eval(lRec);
+                                L += beta * scatteringPdf / (lightPdf + scatteringPdf) * emitter->eval(lRec);
                             }
                         }
                     }
@@ -142,17 +144,19 @@ public:
                 {
                     shadowRay.maxt = (its_2.p - shadowRay.o).norm();
                     Color3f Tr(0.f);
-                    if (lRec.shadowRay.medium)
-                        Tr = shadowRay.medium->Tr(lRec.shadowRay);  
+                    Ray3f shadowRayEmitter(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, mRec.medium);
+                    if (shadowRayEmitter.medium)
+                        Tr = shadowRay.medium->Tr(shadowRayEmitter);  
                     else
                         Tr = Color3f(1.f);
                     EmitterQueryRecord pRec(mRec.p);
+                    pRec.wi = shadowRay.d;
 				    pRec.n = its_2.shFrame.n;
 				    pRec.dist = its_2.t;
 				    pRec.p = its_2.p;
                     if (lightPdf + scatteringPdf > 1e-9)
                     {
-                        L += n_emitters * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(pRec);
+                        L += beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(pRec);
                     }
                 }
             }
@@ -165,6 +169,11 @@ public:
         Color3f L(0.0f), beta(1.f);
 		Ray3f ray_s = ray; // Next ray
         bool bounceSpecular = false;
+
+        Intersection its;
+        if (!scene->rayIntersect(ray, its))
+			return scene->getBackground(ray);
+
 		for(int bounces = 0; bounces < 100 ; bounces++) 
         {
             // Find intersection
@@ -211,6 +220,7 @@ public:
                         {
                             auto emitter = its.mesh->getEmitter();
                             EmitterQueryRecord lRec(ray_s.o);
+                            lRec.wi = ray_s.d;
                             lRec.n = its.shFrame.n;
                             lRec.dist = its.t;
                             lRec.p = its.p;

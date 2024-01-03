@@ -33,11 +33,11 @@ public:
         m_bbox.expandBy(m_position + Vector3f(m_radius));
     }
 
-    BoundingBox3f getBoundingBox(uint32_t index) const { return m_bbox; }
+    virtual BoundingBox3f getBoundingBox(uint32_t index) const override{ return m_bbox; }
 
-    Point3f getCentroid(uint32_t index) const { return m_position; }
+    virtual Point3f getCentroid(uint32_t index) const override { return m_position; }
 
-    bool rayIntersect(uint32_t index, const Ray3f &ray, float &u, float &v, float &t) const {
+    virtual bool rayIntersect(uint32_t index, const Ray3f &ray, float &u, float &v, float &t) const override {
 	/* to be implemented */
         auto oc = ray.o - m_position;
         auto a = ray.d.squaredNorm();
@@ -59,7 +59,8 @@ public:
         return true;
     }
 
-    void setHitInformation(uint32_t index, const Ray3f &ray, Intersection & its) const {
+    virtual void setHitInformation(uint32_t index, const Ray3f &ray, Intersection & its) const override {
+        std::cout << "hola" << std::endl;
         its.p = ray(its.t);
         its.geoFrame = Frame((its.p - m_position).normalized());
         its.shFrame = Frame((its.p - m_position).normalized());
@@ -69,16 +70,19 @@ public:
         its.mesh = this;
     }
 
-    void sampleSurface(ShapeQueryRecord & sRec, const Point2f & sample) const {
+    virtual void samplePosition(const Point2f &sample, EmitterQueryRecord & lRec) const override
+    {
+        std::cout << "adios" << std::endl;
         Vector3f q = Warp::squareToUniformSphere(sample);
-        sRec.p = m_position + m_radius * q;
-        sRec.n = q;
-        sRec.pdf = std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
+        lRec.p = m_position + m_radius * q;
+        lRec.n = q;
+        lRec.pdf = std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
     }
-
-    float pdfSurface(const ShapeQueryRecord & sRec) const {
+    virtual float pdf(const Point3f &p) const override
+    {
         return std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
     }
+
 
     std::string toString() const {
         return tfm::format(

@@ -119,7 +119,7 @@
 		</medium> -->
 	</mesh>
 
-	<!-- <mesh type="sphere">
+	<mesh type="sphere">
 		<point name="center" value="0.445800 0.332100 0.376700" />
 		<float name="radius" value="0.3263" />
 
@@ -130,7 +130,7 @@
 			<phase type="henyeyGreenstein">
 				<float name="g" value="0.99"/>
 			</phase>
-		</medium> -->
+		</medium>
 		<!-- <medium type="homogeneous">
 			<color name="sigma_a" value="0.01 0.01 0.01"/>
 			<color name="sigma_s" value="0.01 0.01 0.01"/>
@@ -145,7 +145,7 @@
 				<float name="g" value="0"/>
 			</phase>
 		</medium> -->
-	<!-- </mesh> -->
+	</mesh>
 
 	<mesh type="obj">
 		<string name="filename" value="meshes/light.obj"/>

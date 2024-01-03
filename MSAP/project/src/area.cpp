@@ -29,6 +29,7 @@ NORI_NAMESPACE_BEGIN
 class AreaEmitter : public Emitter {
 public:
 	AreaEmitter(const PropertyList &props) {
+		m_type = EmitterType::EMITTER_AREA;
 		m_radiance = new ConstantSpectrumTexture(props.getColor("radiance", Color3f(1.f)));
 		m_scale = props.getFloat("scale", 1.);
 	}
@@ -54,32 +55,25 @@ public:
 		// This function call can be done by bsdf sampling routines.
 		// Hence the ray was already traced for us - i.e a visibility test was already performed.
 		// Hence just check if the associated normal in emitter query record and incoming direction are not backfacing
-        
-		// return m_radiance;
-        if (lRec.wi.dot(lRec.n) < 0)
-			return Color3f(15.0f);
-            //return m_radiance->eval(lRec.uv);
-        else 
-            return Color3f(0.f);
+		if (lRec.n.dot(-lRec.wi) > 0) {		// (-wi, emitter_normal) < 90º
+			return m_radiance->eval(lRec.uv); 
+		} else {
+			return Color3f(0);
+		}
 	}
 
 	virtual Color3f sample(EmitterQueryRecord & lRec, const Point2f & sample, float optional_u) const {
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 
-        ShapeQueryRecord sRec(lRec.ref);
-        m_mesh->sampleSurface(sRec, sample);
-        lRec.p = sRec.p;
-        lRec.n = sRec.n;
-        lRec.wi = (lRec.p - lRec.ref).normalized();
-        lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, this->getMedium());
-        lRec.pdf = sRec.pdf;
+		m_mesh->samplePosition(sample, lRec);
 
-        // return eval(lRec) / pdf(lRec);
-        if (pdf(lRec) > 1e-9)
-            return eval(lRec) / pdf(lRec);
-        else 
-            return Color3f(0.f);
+		lRec = EmitterQueryRecord(this, lRec.ref, lRec.p, lRec.n, lRec.uv);
+		if (pdf(lRec) < Epsilon) {
+			return Color3f(0.0f);
+		} else {
+			return eval(lRec) / pdf(lRec);
+		}
 	}
 
 	// Returns probability with respect to solid angle given by all the information inside the emitterqueryrecord.
@@ -90,11 +84,8 @@ public:
 		if (!m_mesh)
 			throw NoriException("There is no shape attached to this Area light!");
 		
-        ShapeQueryRecord sRec(lRec.ref);
-        sRec.p = lRec.p;
-        float density_A = m_mesh->pdfSurface(sRec); // Area density
-        float density_O = (lRec.p-lRec.ref).squaredNorm() / fabsf(lRec.wi.dot(lRec.n)+1e-9) * density_A; // +1e-9  in case of zero-divided
-        return density_O;
+		float pdf = m_mesh->pdf(lRec.p);
+		return pdf * (lRec.dist * lRec.dist) / std::abs(lRec.n.dot(lRec.wi));
 	}
 
 

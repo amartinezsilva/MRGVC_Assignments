@@ -160,7 +160,7 @@ Point3f Mesh::getCentroid(n_UINT index) const {
  * \brief Uniformly sample a position on the mesh with
  * respect to surface area. Returns both position and normal
  */
-void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const
+void Mesh::samplePosition(const Point2f &sample, EmitterQueryRecord & lRec) const
 {
 	Point2f new_sample = sample;
 
@@ -176,20 +176,20 @@ void Mesh::samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2
     float gamma = 1.0f - alpha - beta;
 
     // Compute the sampled position
-    p = alpha * m_V.col(i0) + beta * m_V.col(i1) + gamma * m_V.col(i2);
+    lRec.p = alpha * m_V.col(i0) + beta * m_V.col(i1) + gamma * m_V.col(i2);
 
     // Compute the sampled normal
     if (m_N.size() > 0) {
-        n = alpha * m_N.col(i0) + beta * m_N.col(i1) + gamma * m_N.col(i2).normalized();
+        lRec.n = alpha * m_N.col(i0) + beta * m_N.col(i1) + gamma * m_N.col(i2).normalized();
     } else {
         Point3f p0 = m_V.col(i0);
         Point3f p1 = m_V.col(i1);
         Point3f p2 = m_V.col(i2);
-        n = (p1-p0).cross(p2-p0).normalized();
+        lRec.n = (p1-p0).cross(p2-p0).normalized();
     }
     // Compute the sampled uv coordinates
     if (m_UV.size() > 0) {
-        uv = alpha * m_UV.col(i0) + beta * m_UV.col(i1) + gamma * m_UV.col(i2);	
+        lRec.uv = alpha * m_UV.col(i0) + beta * m_UV.col(i1) + gamma * m_UV.col(i2);	
     }
 
     return;	
@@ -201,19 +201,6 @@ float Mesh::pdf(const Point3f &p) const
     float meshArea = m_pdf.getNormalization();
 	
 	return meshArea;
-}
-
-void Mesh::sampleSurface(ShapeQueryRecord & sRec, const Point2f & sample) const {
-    // Vector3f q = Warp::squareToUniformSphere(sample);
-    // sRec.p = m_position + m_radius * q;
-    // sRec.n = q;
-    // sRec.pdf = std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
-    return;
-}
-
-float Mesh::pdfSurface(const ShapeQueryRecord & sRec) const {
-    // return std::pow(1.f/m_radius,2) * Warp::squareToUniformSpherePdf(Vector3f(0.0f,0.0f,1.0f));
-    return 0.0;
 }
 
 
@@ -256,12 +243,16 @@ std::string Mesh::toString() const {
         "  triangleCount = %i,\n"
         "  bsdf = %s,\n"
         "  emitter = %s\n"
+        "  inside = %s,\n"
+        "  outside = %s,\n"
         "]",
         m_name,
         m_V.cols(),
         m_F.cols(),
         m_bsdf ? indent(m_bsdf->toString()) : std::string("null"),
-        m_emitter ? indent(m_emitter->toString()) : std::string("null")
+        m_emitter ? indent(m_emitter->toString()) : std::string("null"),
+        m_mediumInterface.inside ? indent(m_mediumInterface.inside->toString()) : std::string("null"),
+        m_mediumInterface.outside ? indent(m_mediumInterface.outside->toString()) : std::string("null")
     );
 }
 

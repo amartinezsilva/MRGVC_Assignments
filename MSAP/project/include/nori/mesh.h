@@ -72,29 +72,6 @@ struct Intersection {
 };
 
 /**
- * \brief Data record for conveniently querying and sampling the
- * a point on a shape
- */
-struct ShapeQueryRecord {
-    /// Reference point
-    Point3f ref;
-    /// Sampled point
-    Point3f p;
-    /// Sampled normal
-    Normal3f n;
-    /// Probability of the sample
-    float pdf;
-
-    /// Empty constructor
-    ShapeQueryRecord() {}
-    /// Data structure with ref to call sampleSurface()
-    ShapeQueryRecord(const Point3f & ref_) : ref(ref_) {}
-    /// Data structure with ref and p to call pdfSurface()
-    ShapeQueryRecord(const Point3f & ref_, const Point3f & p_) : ref(ref_), p(p_) {}
-
-};
-
-/**
  * \brief Triangle mesh
  *
  * This class stores a triangle mesh object and provides numerous functions
@@ -120,34 +97,22 @@ public:
      * \brief Uniformly sample a position on the mesh with
      * respect to surface area. Returns both position and normal
      */
-    void samplePosition(const Point2f &sample, Point3f &p, Normal3f &n, Point2f &uv) const;
+    virtual void samplePosition(const Point2f &sample, EmitterQueryRecord & lRec) const;
 
 	/// Return the surface area of the given triangle
-	float pdf(const Point3f &p) const;
+	virtual float pdf(const Point3f &p) const;
 
     /// Return the surface area of the given triangle
     float surfaceArea(n_UINT index) const;
-
-    /**
-     * \brief Sample a point on the surface (potentially using the point sRec.ref to importance sample)
-     * This method should set sRec.p, sRec.n and sRec.pdf
-     * Probability should be with respect to area
-     * */
-    void sampleSurface(ShapeQueryRecord & sRec, const Point2f & sample) const;
-    /**
-     * \brief Return the probability of sampling a point sRec.p by the sampleSurface() method (sRec.ref should be set before)
-     * sRec.n and sRec.pdf are ignored
-     * */
-    float pdfSurface(const ShapeQueryRecord & sRec) const;
 
     //// Return an axis-aligned bounding box of the entire mesh
     const BoundingBox3f &getBoundingBox() const { return m_bbox; }
 
     //// Return an axis-aligned bounding box containing the given triangle
-    BoundingBox3f getBoundingBox(n_UINT index) const;
+    virtual BoundingBox3f getBoundingBox(n_UINT index) const;
 
     //// Return the centroid of the given triangle
-    Point3f getCentroid(n_UINT index) const;
+    virtual Point3f getCentroid(n_UINT index) const;
 
     /** \brief Ray-triangle intersection test
      *
@@ -174,7 +139,7 @@ public:
      * \return
      *   \c true if an intersection has been detected
      */
-    bool rayIntersect(n_UINT index, const Ray3f &ray, float &u, float &v, float &t) const;
+    virtual bool rayIntersect(n_UINT index, const Ray3f &ray, float &u, float &v, float &t) const;
 
     /// Set intersection information: hit point, shading frame, UVs
     virtual void setHitInformation(uint32_t index, const Ray3f &ray, Intersection & its) const;

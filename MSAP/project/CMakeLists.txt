@@ -113,9 +113,9 @@ add_executable(nori
   # PROJECT
   src/medium.cpp
   src/henyey_greenstein.cpp
-  src/dof_camera.cpp
   src/sphere.cpp
   src/volpath.cpp
+  src/transluscent.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

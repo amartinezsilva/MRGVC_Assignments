@@ -120,6 +120,7 @@ public:
      * or not to store photons on a surface
      */
     virtual bool isDiffuse() const { return false; }
+    virtual bool isTransluscent() const { return false; }
     virtual bool isDelta() const { return false; }
 };
 

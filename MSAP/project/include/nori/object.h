@@ -163,4 +163,15 @@ private:
         } \
     } cls ##__NORI_;
 
+/// Macro for registering an object constructor with the \ref NoriObjectFactory
+#define NORI_REGISTER_TEMPLATED_CLASS(cls, T, name) \
+    cls<T> * cls ##_## T ##_create(const PropertyList &list) { \
+        return new cls<T>(list); \
+    } \
+    static struct cls ##_## T ##_{ \
+        cls ##_## T ##_() { \
+            NoriObjectFactory::registerClass(name, cls ##_## T ##_create); \
+        } \
+    } cls ## T ##__NORI_;
+
 NORI_NAMESPACE_END

@@ -23,7 +23,6 @@
 
 #include <nori/accel.h>
 #include <nori/medium.h>
-#include <nori/emitter.h>
 
 NORI_NAMESPACE_BEGIN
 
@@ -65,15 +64,6 @@ public:
 
 	/// Return a reference to an array containing all lights
 	const std::vector<Emitter *> &getLights() const { return m_emitters; }
-
-    /// Return a random emitter
-    const Emitter * getRandomEmitter(float rnd) const {
-        auto const & n = m_emitters.size();
-        size_t index = std::min(
-                static_cast<size_t>(std::floor(n*rnd)),
-                n-1);
-        return m_emitters[index];
-    }
 
 	/// Return a the scene background
 	Color3f getBackground(const Ray3f& ray) const;
