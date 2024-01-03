@@ -101,12 +101,7 @@ public:
         Vector3f d = nearP.normalized();
         float invZ = 1.0f / d.z();
 
-        ray.o = m_cameraToWorld * Point3f(0, 0, 0);
-        ray.d = m_cameraToWorld * d;
-        ray.mint = m_nearClip * invZ;
-        ray.maxt = m_farClip * invZ;
-        ray.medium = this->getMedium();
-        ray.update();
+        ray = Ray3f(m_cameraToWorld * Point3f(0, 0, 0), m_cameraToWorld * d, m_nearClip * invZ, m_farClip * invZ, this->getMedium());
 
         return Color3f(1.0f);
     }
@@ -141,6 +136,7 @@ public:
             "  fov = %f,\n"
             "  clip = [%f, %f],\n"
             "  rfilter = %s\n"
+            "  medium = %s,\n"
             "]",
             indent(m_cameraToWorld.toString(), 18),
             m_outputSize.toString(),

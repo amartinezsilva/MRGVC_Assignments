@@ -25,9 +25,11 @@ public:
         Intersection its_2;
 
         /* Emiiter sampling */
-		EmitterQueryRecord lRec(its.p);
-		const Emitter *random_emitter = scene->sampleEmitter(sampler->next1D(), lightPdf);
-		Color3f Le = random_emitter->sample(lRec, sampler->next2D(), 0.);
+		auto emitter = scene->getRandomEmitter(sampler->next1D());
+        int n_emitters = scene->getLights().size();
+        EmitterQueryRecord lRec(mRec.p);
+        Color3f Le = emitter->sample(lRec, sampler->next2D(), 0.);
+        lightPdf = emitter->pdf(lRec);
         if (its.isSurfaceIteraction) // surface interaction
         {
             BSDFQueryRecord bRec(its.toLocal(mRec.wi), its.toLocal(lRec.wi), its.uv, its.mesh->getBSDF()->isDelta()? EDiscrete :ESolidAngle);
@@ -41,15 +43,15 @@ public:
                 Tr = Color3f(1.f);
             if (!scene->rayIntersect(lRec.shadowRay, its_2))
             {
-                if (random_emitter->isDelta())
-                    L += Tr * beta * Le;
-                else if (random_emitter->isInfinity())
+                if (emitter->isDelta())
+                    L += n_emitters * Tr * beta * Le;
+                else if (emitter->isInfinity())
                 {
                     if (!mRec.medium && lightPdf + scatteringPdf > 1e-9)
-                        L += beta * lightPdf / (lightPdf + scatteringPdf) * Le;
+                        L += n_emitters * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
                 }
                 else if (lightPdf + scatteringPdf > 1e-9)
-                    L += Tr * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
+                    L += n_emitters * Tr * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
             }
         }
         else // medium interaction
@@ -65,10 +67,10 @@ public:
                 Tr = Color3f(1.f);
             if (!scene->rayIntersect(lRec.shadowRay, its_2))
             {
-                if (random_emitter->isDelta())
-                    L += Tr * beta * Le;
-                else if (lightPdf + scatteringPdf > 1e-9 && !random_emitter->isInfinity())
-                    L += beta * lightPdf / (lightPdf + scatteringPdf) * Le;
+                if (emitter->isDelta())
+                    L += n_emitters * Tr * beta * Le;
+                else if (lightPdf + scatteringPdf > 1e-9 && !emitter->isInfinity())
+                    L += n_emitters * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
             }
         }
 
@@ -102,7 +104,7 @@ public:
                     lightPdf = its_2.mesh->getEmitter()->pdf(lRec);
                     if (lightPdf + scatteringPdf > 1e-9)
                     {
-                        L += Tr * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(lRec);
+                        L += n_emitters * Tr * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(lRec);
                     }
                 }
             }
@@ -120,7 +122,7 @@ public:
                             lightPdf = emitter->pdf(lRec);
                             if (lightPdf + scatteringPdf > 1e-9)
                             {
-                                L += beta * scatteringPdf / (lightPdf + scatteringPdf) * emitter->eval(lRec);
+                                L += n_emitters * beta * scatteringPdf / (lightPdf + scatteringPdf) * emitter->eval(lRec);
                             }
                         }
                     }
@@ -150,7 +152,7 @@ public:
 				    pRec.p = its_2.p;
                     if (lightPdf + scatteringPdf > 1e-9)
                     {
-                        L += beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(pRec);
+                        L += n_emitters * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(pRec);
                     }
                 }
             }

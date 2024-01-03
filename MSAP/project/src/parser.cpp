@@ -61,7 +61,7 @@ NoriObject *loadFromXML(const std::string &filename) {
         EBSDF                 = NoriObject::EBSDF,
         ETexture              = NoriObject::ETexture,
         EPhaseFunction        = NoriObject::EPhaseFunction,
-        EEmitter            = NoriObject::EEmitter,
+        EEmitter              = NoriObject::EEmitter,
         EMedium               = NoriObject::EMedium,
         ECamera               = NoriObject::ECamera,
         EIntegrator           = NoriObject::EIntegrator,

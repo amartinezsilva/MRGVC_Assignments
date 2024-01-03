@@ -29,7 +29,6 @@ NORI_NAMESPACE_BEGIN
 class AreaEmitter : public Emitter {
 public:
 	AreaEmitter(const PropertyList &props) {
-		m_type = EmitterType::EMITTER_AREA;
 		m_radiance = new ConstantSpectrumTexture(props.getColor("radiance", Color3f(1.f)));
 		m_scale = props.getFloat("scale", 1.);
 	}
@@ -58,7 +57,8 @@ public:
         
 		// return m_radiance;
         if (lRec.wi.dot(lRec.n) < 0)
-            return m_radiance->eval(lRec.uv);
+			return Color3f(15.0f);
+            //return m_radiance->eval(lRec.uv);
         else 
             return Color3f(0.f);
 	}

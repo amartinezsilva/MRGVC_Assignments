@@ -158,6 +158,14 @@ std::string Scene::toString() const {
         meshes += "\n";
     }
 
+    std::string lights;
+    for (size_t i=0; i<m_emitters.size(); ++i) {
+        lights += std::string("  ") + indent(m_emitters[i]->toString(), 2);
+        if (i + 1 < m_emitters.size())
+            lights += ",";
+        lights += "\n";
+    }
+
     return tfm::format(
         "Scene[\n"
         "  integrator = %s,\n"
@@ -166,11 +174,14 @@ std::string Scene::toString() const {
         "  %s  }\n"
         "  meshes = {\n"
         "  %s  }\n"
+        "  emitters = {\n"
+        "  %s  }\n"
         "]",
         indent(m_integrator->toString()),
         indent(m_sampler->toString()),
         indent(m_camera->toString()),
-        indent(meshes, 2)
+        indent(meshes, 2),
+        indent(lights,2)
     );
 }
 
