@@ -17,6 +17,7 @@
 #include <nori/warp.h>
 #include <filesystem/resolver.h>
 #include <fstream>
+#include <nori/transform.h>
 
 
 NORI_NAMESPACE_BEGIN
@@ -28,6 +29,8 @@ public:
 		m_environment = 0;
 
 		std::string m_environment_name = props.getString("filename", "null");
+		m_lightToWorld = props.getTransform("toWorld", Transform());
+        m_worldToLight = m_lightToWorld.getInverseMatrix();
 
 		filesystem::path filename =
 			getFileResolver()->resolve(m_environment_name);
@@ -53,9 +56,11 @@ public:
 			"AreaLight[\n"
 			"  radiance = %s,\n"
 			"  environment = %s,\n"
+			"  lightToWorld = %s\n"
 			"]",
 			m_radiance.toString(),
-			m_environment_name);
+			m_environment_name,
+			indent(m_lightToWorld.toString(), 18));
 	}
 
 	// We don't assume anything about the visibility of points specified in 'ref' and 'p' in the EmitterQueryRecord.
@@ -67,8 +72,10 @@ public:
 		if (!m_environment)
 			return m_radiance;
 
-		float phi = atan2(lRec.wi[2], lRec.wi[0]);
-		float theta = acos(lRec.wi[1]);
+		Vector3f w = (m_worldToLight * lRec.wi).normalized();
+
+		float phi = atan2(w[2], w[0]);
+		float theta = acos(w[1]);
 		if (phi < 0) phi += 2 * M_PI;
 
 		float x = phi / (2 * M_PI);
@@ -80,6 +87,7 @@ public:
 
 	virtual Color3f sample(EmitterQueryRecord& lRec, const Point2f& sample, float optional_u) const {
 				
+		//lRec.wi = m_lightToWorld * Vector3f(sinTheta * cosPhi, sinTheta * sinPhi, cosTheta);
 		lRec.wi = Warp::squareToUniformSphere(sample);
         lRec.n = -lRec.wi;
         lRec.pdf = pdf(lRec);
@@ -92,7 +100,9 @@ public:
 	virtual float pdf(const EmitterQueryRecord& lRec) const {
 		// Since you're sampling uniformly on the sphere, the pdf is constant
     	// You can use the pdf function from the Warp class for the squareToUniformSphere function
- 		return Warp::squareToUniformSpherePdf(lRec.wi);
+ 		//Vector3f w = (m_worldToLight * lRec.wi).normalized();
+
+		return Warp::squareToUniformSpherePdf(lRec.wi);
 
 	}
 
@@ -105,6 +115,8 @@ public:
 
 protected:
 	Color3f m_radiance;
+    Transform m_worldToLight;
+    Transform m_lightToWorld;
 	Bitmap *m_environment;
 	std::string m_environment_name;
 };

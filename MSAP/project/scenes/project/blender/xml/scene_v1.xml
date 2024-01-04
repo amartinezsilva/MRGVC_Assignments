@@ -28,7 +28,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="25.000000,25.000000,25.000000"/>
+			<color name="radiance" value="350.000000,350.000000,350.000000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -141,7 +141,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="10.000000,0.028252,0.058650"/>
+			<color name="radiance" value="450.000000,0.028252,0.058650"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -234,7 +234,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="10.00000,10.00000,10.00000"/>
+			<color name="radiance" value="450.00000,450.00000,450.00000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -340,7 +340,7 @@
 			<float name="alpha" value="0.500000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="11.986549,3.348419,0.000000"/>
+			<color name="radiance" value="450.986549,3.348419,0.000000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -483,8 +483,11 @@
 	</mesh>
 	<!-- Define the light source -->
 	<emitter type="environment">
-      <string name="filename" value="rooftop_night_8k.exr"/>
-	  <float name ="rotate" value="180"/>
-	  <color name ="radiance" value="15,15,15"/>
+      	<string name="filename" value="rooftop_night_8k.exr"/>
+	   	<transform name="toWorld">
+            <scale value="10,10,10"/>
+			<rotate axis="1,0,0" angle="-90"/>
+			<translate value="0,0,0"/>
+        </transform>
 	</emitter>
 </scene>

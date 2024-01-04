@@ -1,7 +1,7 @@
-# Blender 4.0.2 MTL File: 'scene_v1.blend'
+# Blender 4.0.2 MTL File: 'scene_v2.blend'
 # www.blender.org
 
-newmtl Material.002
+newmtl Material
 Ns 360.000000
 Ka 1.000000 1.000000 1.000000
 Kd 0.800000 0.800000 0.800000
