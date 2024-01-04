@@ -1,6 +1,6 @@
 <?xml version="1.0" ?>
 <scene>
-	<integrator type="path_mis"/>
+	<integrator type="volpath"/>
 	<sampler type="independent">
 		<integer name="sampleCount" value="64"/>
 	</sampler>
@@ -28,7 +28,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="20.000000,20.000000,20.000000"/>
+			<color name="radiance" value="25.000000,25.000000,25.000000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -141,7 +141,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="8.000000,0.028252,0.058650"/>
+			<color name="radiance" value="10.000000,0.028252,0.058650"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -171,7 +171,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="5.000000,5.000000,5.00000"/>
+			<color name="radiance" value="0.100000,0.1000000,0.10000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -234,7 +234,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="0.100000,0.100000,0.100000"/>
+			<color name="radiance" value="10.00000,10.00000,10.00000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -482,9 +482,9 @@
 		</bsdf>
 	</mesh>
 	<!-- Define the light source -->
-	<!-- <emitter type="environment">
+	<emitter type="environment">
       <string name="filename" value="rooftop_night_8k.exr"/>
 	  <float name ="rotate" value="180"/>
 	  <color name ="radiance" value="15,15,15"/>
-	</emitter> -->
+	</emitter>
 </scene>
