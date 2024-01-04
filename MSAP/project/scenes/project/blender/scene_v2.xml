@@ -2,7 +2,7 @@
 <scene>
 	<integrator type="path_mis"/>
 	<sampler type="independent">
-		<integer name="sampleCount" value="4096"/>
+		<integer name="sampleCount" value="64"/>
 	</sampler>
 	<camera type="perspective">
 		<float name="fov" value="71.50777759085639"/>
@@ -455,7 +455,7 @@
 			<float name="alpha" value="0.500000"/>
 		</bsdf>
 	</mesh>
-	<mesh type="obj">
+	<!-- <mesh type="obj">
 		<string name="filename" value="meshes/Plane.obj"/>
 		<bsdf type="diffuse" name="Material.002">
 			<color name="albedo" value="0.169717,0.169717,0.169717"/>
@@ -490,7 +490,7 @@
 		<bsdf type="diffuse">
 			<color name="albedo" value="0.75,0.75,0.75"/>
 		</bsdf>
-	</mesh>
+	</mesh> -->
 	<mesh type="obj">
 		<string name="filename" value="meshes/Plane.006.obj"/>
 		<bsdf type="diffuse" name="Material.004">
@@ -499,5 +499,13 @@
 		<emitter type="area">
 			<color name="radiance" value="120.000000,120.000000,120.000000"/>
 		</emitter>
-	</mesh>
+	</mesh> 
+
+	<!-- Define the light source -->
+	<emitter type="environment">
+      <string name="filename" value="rooftop_night_8k.exr"/>
+	  <float name ="rotate" value="180"/>
+	  <color name ="radiance" value="15,15,15"/>
+	</emitter>
+
 </scene>
