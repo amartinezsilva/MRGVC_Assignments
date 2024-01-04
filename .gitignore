@@ -4,6 +4,7 @@
 PACS/P1/eigen-3.4.0/
 *.pyc
 *.zip
+*.exr
 MSAP/build
 CV/LabSession3/SuperGluePretrainedNetwork
 PACS/Laboratory-5/CImg/*
