@@ -1,0 +1,456 @@
+<?xml version="1.0" ?>
+<scene>
+	<integrator type="path_mis"/>
+	<sampler type="independent">
+		<integer name="sampleCount" value="4096"/>
+	</sampler>
+	<camera type="perspective">
+		<float name="fov" value="39.597755335771296"/>
+		<float name="nearClip" value="0.10000000149011612"/>
+		<float name="farClip" value="100.0"/>
+		<integer name="width" value="1920"/>
+		<integer name="height" value="1080"/>
+		<transform name="toWorld">
+			<scale value="1.000000 1.000000 -1.000000"/>
+			<matrix value="0.7691451907157898,0.023869190365076065,0.6386281847953796,10.332751274108887,0.6385944485664368,0.01000424288213253,-0.769478440284729,-11.89676570892334,-0.024755818769335747,0.9996650218963623,-0.007548016961663961,2.227834463119507,0.0,0.0,0.0,1.0"/>
+		</transform>
+	</camera>
+	<emitter type="pointlight">
+		<point name="position" value="4.096928,0.993725,5.745058"/>
+		<color name="radiance" value="1000.000000,1000.000000,1000.000000"/>
+	</emitter>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj1.obj"/>
+		<bsdf type="roughsubstrate" name="mat0">
+			<color name="kd" value="0.015690,0.149020,0.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj10.obj"/>
+		<bsdf type="roughsubstrate" name="mat5">
+			<color name="kd" value="0.400000,0.400000,0.400000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj11.obj"/>
+		<bsdf type="roughsubstrate" name="mat6">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj12.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj13.obj"/>
+		<bsdf type="roughsubstrate" name="mat6">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj14.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj15.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj16.obj"/>
+		<bsdf type="roughsubstrate" name="mat0">
+			<color name="kd" value="0.015690,0.149020,0.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj16.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj17.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj18.obj"/>
+		<bsdf type="roughsubstrate" name="mat6">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj19.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj2.obj"/>
+		<bsdf type="roughsubstrate" name="mat0">
+			<color name="kd" value="0.015690,0.149020,0.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj2.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj20.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj21.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj21.obj"/>
+		<bsdf type="roughsubstrate" name="mat7">
+			<color name="kd" value="0.000000,0.000000,0.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj22.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj23.obj"/>
+		<bsdf type="roughsubstrate" name="mat5">
+			<color name="kd" value="0.400000,0.400000,0.400000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj24.obj"/>
+		<bsdf type="roughsubstrate" name="mat8">
+			<color name="kd" value="0.019610,0.019610,0.019610"/>
+			<float name="alpha" value="0.750000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj24.obj"/>
+		<bsdf type="roughsubstrate" name="mat9">
+			<color name="kd" value="1.000000,0.494120,0.000000"/>
+			<float name="alpha" value="0.750000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj25.obj"/>
+		<bsdf type="roughsubstrate" name="mat7">
+			<color name="kd" value="0.000000,0.000000,0.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj26.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj27.obj"/>
+		<bsdf type="roughsubstrate" name="mat8">
+			<color name="kd" value="0.019610,0.019610,0.019610"/>
+			<float name="alpha" value="0.750000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj27.obj"/>
+		<bsdf type="roughsubstrate" name="mat9">
+			<color name="kd" value="1.000000,0.494120,0.000000"/>
+			<float name="alpha" value="0.750000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj28.obj"/>
+		<bsdf type="roughsubstrate" name="mat7">
+			<color name="kd" value="0.000000,0.000000,0.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj29.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj3.obj"/>
+		<bsdf type="roughsubstrate" name="mat0">
+			<color name="kd" value="0.015690,0.149020,0.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj3.obj"/>
+		<bsdf type="roughsubstrate" name="mat2">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj30.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj30.obj"/>
+		<bsdf type="roughsubstrate" name="mat10">
+			<color name="kd" value="1.000000,1.000000,1.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj31.obj"/>
+		<bsdf type="roughsubstrate" name="mat7">
+			<color name="kd" value="0.000000,0.000000,0.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj31.obj"/>
+		<bsdf type="roughsubstrate" name="mat11">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj32.obj"/>
+		<bsdf type="roughsubstrate" name="mat12">
+			<color name="kd" value="0.501960,0.501960,0.501960"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj32.obj"/>
+		<bsdf type="roughsubstrate" name="mat13">
+			<color name="kd" value="0.184310,0.090200,0.062750"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj33.obj"/>
+		<bsdf type="roughsubstrate" name="mat12">
+			<color name="kd" value="0.501960,0.501960,0.501960"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj34.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj34.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj35.obj"/>
+		<bsdf type="roughsubstrate" name="mat14">
+			<color name="kd" value="1.000000,1.000000,1.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj36.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj37.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj37.obj"/>
+		<bsdf type="roughsubstrate" name="mat7">
+			<color name="kd" value="0.000000,0.000000,0.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj37.obj"/>
+		<bsdf type="roughsubstrate" name="mat15">
+			<color name="kd" value="1.000000,1.000000,1.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj37.obj"/>
+		<bsdf type="roughsubstrate" name="mat16">
+			<color name="kd" value="0.749020,0.000000,0.000000"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj38.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj39.obj"/>
+		<bsdf type="roughsubstrate" name="mat12">
+			<color name="kd" value="0.501960,0.501960,0.501960"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj39.obj"/>
+		<bsdf type="roughsubstrate" name="mat13">
+			<color name="kd" value="0.184310,0.090200,0.062750"/>
+			<float name="alpha" value="0.000000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj4.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj4.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj40.obj"/>
+		<bsdf type="roughsubstrate" name="mat17">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj41.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj42.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj43.obj"/>
+		<bsdf type="roughsubstrate" name="mat0">
+			<color name="kd" value="0.015690,0.149020,0.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj43.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj5.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj6.obj"/>
+		<bsdf type="roughsubstrate" name="mat1">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.400000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj6.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj7.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj8.obj"/>
+		<bsdf type="roughsubstrate" name="mat0">
+			<color name="kd" value="0.015690,0.149020,0.000000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj9.obj"/>
+		<bsdf type="roughsubstrate" name="mat3">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.300000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/obj9.obj"/>
+		<bsdf type="roughsubstrate" name="mat4">
+			<color name="kd" value="0.498040,0.498040,0.498040"/>
+			<float name="alpha" value="0.250000"/>
+		</bsdf>
+	</mesh>
+	<mesh type="obj">
+		<string name="filename" value="meshes/Lamp.obj"/>
+		<bsdf type="roughsubstrate" name="UV Grid">
+			<color name="kd" value="0.800000,0.800000,0.800000"/>
+			<float name="alpha" value="0.500000"/>
+		</bsdf>
+	</mesh>
+</scene>
