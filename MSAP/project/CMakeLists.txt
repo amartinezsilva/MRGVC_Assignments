@@ -116,6 +116,7 @@ add_executable(nori
   src/sphere.cpp
   src/volpath.cpp
   src/transluscent.cpp
+  src/inftyarealight.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

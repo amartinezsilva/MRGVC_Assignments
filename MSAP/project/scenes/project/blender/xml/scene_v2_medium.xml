@@ -977,7 +977,7 @@
 			<float name="alpha" value="0.500000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="50.986549,15.348419,0.000000"/>
+			<color name="radiance" value="250.986549,65.348419,0.000000"/>
 		</emitter>
 		<medium type="homogeneous">
 			<color name="sigmaA" value="0 0 0"/>
@@ -1432,7 +1432,7 @@
 			</phase>
 		</medium>
 	</mesh>
-	<emitter type="environment">
+	<emitter type="env">
 		<string name="filename" value="textures/snow_field_4k.exr"/>
 		<float name="rotate" value="180"/>
 		<color name="radiance" value="4.999999701976776, 4.999999701976776, 4.999999701976776"/>

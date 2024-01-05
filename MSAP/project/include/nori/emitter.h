@@ -60,6 +60,8 @@ struct EmitterQueryRecord {
     Vector3f wi;
     /// Distance between 'ref' and 'p'
     float dist;
+    /// Shadow ray
+    Ray3f shadowRay;
 
     /// Create an unitialized query record
     EmitterQueryRecord() : emitter(nullptr) { }
