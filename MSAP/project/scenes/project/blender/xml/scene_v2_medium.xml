@@ -1432,8 +1432,8 @@
 			</phase>
 		</medium>
 	</mesh>
-	<emitter type="env">
-		<string name="filename" value="textures/snow_field_4k.exr"/>
+	<emitter type="environment_medium">
+		<string name="filename" value="rooftop_night_8k.exr"/>
 		<float name="rotate" value="180"/>
 		<color name="radiance" value="4.999999701976776, 4.999999701976776, 4.999999701976776"/>
 		<transform name="toWorld">
