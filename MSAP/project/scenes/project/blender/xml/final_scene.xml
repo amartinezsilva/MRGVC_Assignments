@@ -32,7 +32,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="60.000000,60.000000,60.000000"/>
+			<color name="radiance" value="70.000000,70.000000,70.000000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -58,7 +58,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -268,7 +268,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -296,7 +296,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -307,7 +307,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -318,7 +318,7 @@
 			<color name="albedo" value="0.800000,0.800000,0.800000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="0.100000,0.100000,0.100000"/>
+			<color name="radiance" value="70.00000,70.0000,70.00000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -438,7 +438,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -449,7 +449,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -468,7 +468,7 @@
 			<float name="alpha" value="0.500000"/>
 		</bsdf>
 		<emitter type="area">
-			<color name="radiance" value="127.856522,35.716465,0.000000"/>
+			<color name="radiance" value="160.856522,45.716465,0.000000"/>
 		</emitter>
 	</mesh>
 	<mesh type="obj">
@@ -529,7 +529,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -540,7 +540,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -551,7 +551,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -595,7 +595,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -606,7 +606,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
@@ -617,7 +617,7 @@
 			<color name="kd" value="0.016807,0.149960,0.000000"/>
 			<float name="alpha" value="0.500000"/>
 		</bsdf> -->
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 			<float name="alpha" value="0.1"/>
 		</bsdf>
