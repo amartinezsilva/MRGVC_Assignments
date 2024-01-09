@@ -1,0 +1,12 @@
+# Blender 4.0.2 MTL File: 'final_scene.blend'
+# www.blender.org
+
+newmtl textured_0.003
+Ns 1.000003
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd /home/luis/Descargas/3d models/sidewalk2/source/sidewalk3/textured_0_z2Sm3Tui.jpg
