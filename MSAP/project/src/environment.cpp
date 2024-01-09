@@ -106,7 +106,8 @@ public:
 
 	}
 
-
+	virtual bool isInfinity() const {return true;}
+	
 	// Get the parent mesh
 	void setParent(NoriObject* parent)
 	{

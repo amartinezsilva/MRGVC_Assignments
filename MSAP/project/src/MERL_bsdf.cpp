@@ -41,8 +41,8 @@ public:
         /* RMS surface roughness */
         m_alpha = new ConstantSpectrumTexture(propList.getFloat("alpha", 0.1f));
         
-        path = "/home/adren/MRGVC_Assignments/MSAP/Nori2/scenes/project/blender/xml/";
-	    m_name = propList.getString("merl_coating", "bsdf_binaries/green-metallic-paint");
+        path = "/home/luis/MRGVC_Assignments/MSAP/project/scenes/project/blender/xml/";
+	    m_name = propList.getString("merl_coating", "bsdf_binaries/black-soft-plastic");
         path = path + m_name + ".binary";
         configure();
     }
@@ -195,8 +195,8 @@ class MERLv2 : public BSDF {
 public:
     MERLv2(const PropertyList &propList) {
         
-        path = "/home/adren/MRGVC_Assignments/MSAP/Nori2/scenes/project/blender/xml/";
-	    m_name = propList.getString("merl_coating", "bsdf_binaries/green-metallic-paint");
+        path = "/home/luis/MRGVC_Assignments/MSAP/project/scenes/project/blender/xml/";
+	    m_name = propList.getString("merl_coating", "bsdf_binaries/blue-acrylic");
         path = path + m_name + ".binary";
         configure();
     }
