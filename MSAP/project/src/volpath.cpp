@@ -44,11 +44,6 @@ public:
             {
                 if (emitter->isDelta())
                         L += n_emitters * Tr * beta * Le;
-                else if (emitter->isInfinity())
-                {
-                    if (!mRec.medium && lightPdf + scatteringPdf > 1e-9)
-                        L += n_emitters * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
-                }
                 else if (lightPdf + scatteringPdf > 1e-9)
                     L += n_emitters * Tr * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
             }
@@ -68,7 +63,7 @@ public:
             {
                 if (emitter->isDelta())
                     L += n_emitters * Tr * beta * Le;
-                else if (lightPdf + scatteringPdf > 1e-9 && !emitter->isInfinity())
+                else if (lightPdf + scatteringPdf > 1e-9)
                     L += n_emitters * beta * lightPdf / (lightPdf + scatteringPdf) * Le;
             }
         }
@@ -104,26 +99,6 @@ public:
                     if (lightPdf + scatteringPdf > 1e-9)
                     {
                         L += n_emitters * Tr * beta * scatteringPdf / (lightPdf + scatteringPdf) * its_2.mesh->getEmitter()->eval(lRec);
-                    }
-                }
-            }
-            else // env map
-            {
-                if (!mRec.medium)
-                {
-                    EmitterQueryRecord lRec(mRec.p);
-                    lRec.wi = its.toWorld(bRec.wo);
-                    
-                    for (auto emitter: scene->getLights())
-                    {
-                        if (emitter->isInfinity())
-                        {
-                            lightPdf = emitter->pdf(lRec);
-                            if (lightPdf + scatteringPdf > 1e-9)
-                            {
-                                L += n_emitters * beta * scatteringPdf / (lightPdf + scatteringPdf) * emitter->eval(lRec);
-                            }
-                        }
                     }
                 }
             }
@@ -223,20 +198,6 @@ public:
                             if (bounces == 0 || bounceSpecular) // First bounce += Le || specular += beta * Le  
                                 L += beta * Le;
                         }  
-                    }
-                    else if(!ray.medium) // env map
-                    {
-                        for (auto emitter: scene->getLights())
-                        {
-                            if (emitter->isInfinity())
-                            {
-                                EmitterQueryRecord lRec(its.p);
-                                lRec.wi = ray_s.d;
-                                if (bounces == 0 || bounceSpecular) 
-                                    L += beta * emitter->eval(lRec);
-                            }
-                        }
-                        break;
                     }
                 }
 
