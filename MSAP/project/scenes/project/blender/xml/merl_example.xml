@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 
 <scene>
-	<integrator type="volpath"/>
+	<integrator type="path_mis"/>
 
 	<camera type="perspective">
 		<float name="fov" value="27.7856"/>
@@ -67,8 +67,7 @@
 		<string name="filename" value="meshes/sphere1.obj"/>
 
 		<bsdf type="merl_v1">
-			<string name="merl_coating" value="bsdf_binaries/green-metallic-paint"/>
-			<float name="alpha" value="0.1"/>
+			<string name="merl_coating" value="bsdf_binaries/red-metallic-paint"/>
 		</bsdf>
 
 	</mesh>
@@ -76,7 +75,7 @@
 	<mesh type="obj">
 		<string name="filename" value="meshes/sphere2.obj"/>
 
-		<bsdf type="merl_v2">
+		<bsdf type="merl_v1">
 			<string name="merl_coating" value="bsdf_binaries/green-metallic-paint"/>
 		</bsdf>
 	</mesh>

@@ -2,7 +2,7 @@
 <scene>
 	<integrator type="volpath"/>
 	<sampler type="independent">
-		<integer name="sampleCount" value="1024"/>
+		<integer name="sampleCount" value="2048"/>
 	</sampler>
 	<camera type="perspective">
 		<float name="fov" value="71.50777759085639"/>
