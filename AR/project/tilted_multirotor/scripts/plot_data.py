@@ -37,13 +37,13 @@ def plot_3d_scatter(data_frame_ref, data_frame_experiment, cols_ref, cols_experi
     ax.set_zlabel("Z (m)")
     ax.legend()
 
-    plt.show()
+    #plt.show()
 
 def plot_pose_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experiment):
     
 
     fig, axes = plt.subplots(3, 1, figsize=(10, 15))
-    plt.title("Temporal Evolution of 3D Pose")
+    plt.suptitle("Temporal Evolution of 3D Pose")
 
     # Subtract the first element of the timestamp column to start from 0
     df_experiment[cols_experiment[0]] -= df_experiment[cols_experiment[0]].iloc[0]
@@ -72,15 +72,16 @@ def plot_pose_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experimen
     axes[2].set_xlabel("Time(s)")
 
 
+    plt.savefig('pose_3D.png', bbox_inches='tight')
+
     plt.show()
 
-    plt.savefig('pose_3D.png', bbox_inches='tight')
 
 def plot_velocity_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experiment):
     
 
     fig, axes = plt.subplots(3, 1, figsize=(10, 15))
-    plt.title("Temporal Evolution of velocities")
+    plt.suptitle("Temporal Evolution of velocities")
 
     # Subtract the first element of the timestamp column to start from 0
     df_experiment[cols_experiment[0]] -= df_experiment[cols_experiment[0]].iloc[0]
@@ -108,16 +109,16 @@ def plot_velocity_temporal_evolution(df_ref, df_experiment, cols_ref, cols_exper
 
     axes[2].set_xlabel("Time(s)")
 
+    plt.savefig('velocity.png', bbox_inches='tight')
 
     plt.show()
-    plt.savefig('velocity.png', bbox_inches='tight')
 
 
 def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_ref_rp, cols_ref_yaw, cols_experiment):
     
 
     fig, axes = plt.subplots(3, 1, figsize=(10, 15))
-    plt.title("Temporal Evolution of attitude")
+    plt.suptitle("Temporal Evolution of attitude")
 
     # Subtract the first element of the timestamp column to start from 0
     df_experiment[cols_experiment[0]] -= df_experiment[cols_experiment[0]].iloc[0]
@@ -148,9 +149,9 @@ def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_
 
     axes[2].set_xlabel("Time(s)")
 
+    plt.savefig('pose.png', bbox_inches='tight')
 
     plt.show() 
-    plt.savefig('pose.png', bbox_inches='tight')
 
 def plot_experiment_data(path_interp, path_experiment_data):
 
