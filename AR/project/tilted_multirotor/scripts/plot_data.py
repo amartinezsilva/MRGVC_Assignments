@@ -37,7 +37,9 @@ def plot_3d_scatter(data_frame_ref, data_frame_experiment, cols_ref, cols_experi
     ax.set_zlabel("Z (m)")
     ax.legend()
 
-    #plt.show()
+    plt.savefig('pose_3D.png', bbox_inches='tight')
+
+    plt.show()
 
 def plot_pose_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experiment):
     
@@ -72,7 +74,7 @@ def plot_pose_temporal_evolution(df_ref, df_experiment, cols_ref, cols_experimen
     axes[2].set_xlabel("Time(s)")
 
 
-    plt.savefig('pose_3D.png', bbox_inches='tight')
+    plt.savefig('pose_t.png', bbox_inches='tight')
 
     plt.show()
 
@@ -149,7 +151,7 @@ def plot_attitude_temporal_evolution(df_ref_rp, df_ref_yaw, df_experiment, cols_
 
     axes[2].set_xlabel("Time(s)")
 
-    plt.savefig('pose.png', bbox_inches='tight')
+    plt.savefig('attitude_t.png', bbox_inches='tight')
 
     plt.show() 
 
