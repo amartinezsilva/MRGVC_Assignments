@@ -77,6 +77,14 @@ public:
 	/// Sample emitter
 	const Emitter *sampleEmitter(float rnd, float &pdf) const;
 
+    const Emitter * getRandomEmitter(float rnd) const {
+        auto const & n = m_emitters.size();
+        size_t index = std::min(
+                static_cast<size_t>(std::floor(n*rnd)),
+                n-1);
+        return m_emitters[index];
+    }
+
     float pdfEmitter(const Emitter *em) const;
 
 	/// Get enviromental emmiter

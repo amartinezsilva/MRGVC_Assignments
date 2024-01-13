@@ -116,6 +116,8 @@ add_executable(nori
   src/sphere.cpp
   src/volpath.cpp
   src/transluscent.cpp
+  src/environment_medium.cpp
+  src/MERL_bsdf.cpp
 )
 
 add_definitions(${NANOGUI_EXTRA_DEFS})

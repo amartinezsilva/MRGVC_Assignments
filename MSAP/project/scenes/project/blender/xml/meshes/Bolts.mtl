@@ -1,0 +1,12 @@
+# Blender 4.0.2 MTL File: 'final_scene.blend'
+# www.blender.org
+
+newmtl Bolt_Chrome
+Ns 1000.000000
+Ka 1.000000 1.000000 1.000000
+Kd 0.502886 0.502886 0.502886
+Ks 1.000000 1.000000 1.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 3

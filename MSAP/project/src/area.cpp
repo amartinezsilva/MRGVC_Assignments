@@ -69,6 +69,8 @@ public:
 		m_mesh->samplePosition(sample, lRec);
 
 		lRec = EmitterQueryRecord(this, lRec.ref, lRec.p, lRec.n, lRec.uv);
+		lRec.shadowRay = Ray3f(lRec.ref, lRec.wi, Epsilon, (lRec.ref - lRec.p).norm()-Epsilon, this->getMedium());
+        
 		if (pdf(lRec) < Epsilon) {
 			return Color3f(0.0f);
 		} else {
