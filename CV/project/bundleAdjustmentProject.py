@@ -63,7 +63,7 @@ def triangulate_3D(x1,x2,T_c2_c1):
     P2 = np.dot(np.concatenate((np.identity(3), np.array([[0],[0],[0]])), axis=1), np.eye(4))
     P2 = np.dot(K_c, P2)
 
-    X_computed = np.zeros((4,len(X_w[0][:])))
+    X_computed = np.zeros((4,len(x1Data[0][:])))
 
     for i in range(n_matches):
 
@@ -137,7 +137,7 @@ def compute_f_matrix(x1, x2):
 
     return F_matches
 
-def structure_from_motion(E, x1, x2, X_w, visualize=True):
+def structure_from_motion(E, x1, x2, visualize=True):
     u, s, vh = np.linalg.svd(E)
     
     t_estimated = u[:, 2]
@@ -177,19 +177,23 @@ def structure_from_motion(E, x1, x2, X_w, visualize=True):
         
         X_computed = triangulate_3D(x1, x2, T_c2_c1)
 
-        mean_error = np.mean(np.linalg.norm(X_w - X_computed, axis=0))
+        # mean_error = np.mean(np.linalg.norm(X_w - X_computed, axis=0))
 
-        if mean_error < min_error:
-            min_error = mean_error
+        # if mean_error < min_error:
+        #     min_error = mean_error
+        #     selected_R = R
+        #     selected_t = t
+        #     X_computed_selected = X_computed
+        if(idx == 0):
             selected_R = R
             selected_t = t
             X_computed_selected = X_computed
 
-        if(visualize): plot_3D(X_computed, X_w, [T_w_c1, np.linalg.inv(T_c2_c1)], idx+1)
+        if(visualize): plot_3D(X_computed, [T_w_c1, np.linalg.inv(T_c2_c1)], idx+1)
 
     return selected_R, selected_t, min_error, X_computed_selected
 
-def plot_3D(X_computed, X_w, transforms, idx, title="Untitled"):
+def plot_3D(X_computed, transforms, idx, title="Untitled"):
 
     ##Plot the 3D cameras and the 3D points
     fig3D = plt.figure(4)
@@ -204,15 +208,15 @@ def plot_3D(X_computed, X_w, transforms, idx, title="Untitled"):
         drawRefSystem(ax, T_w_c, '-', 'C'+str(cam_idx+1))
 
     #Plot only provided GT
-    ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
+    #ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
     #plotNumbered3DPoints(ax, X_w, 'b', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options) 
     
     #Plot points for comparison
-    if(not (X_computed == X_w).all()):
+    #if(not (X_computed == X_w).all()):
         ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
         #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
-    ax.legend()
+        ax.legend()
 
     #Matplotlib does not correctly manage the axis('equal')
     xFakeBoundingBox = np.linspace(0, 4, 2)
@@ -412,29 +416,32 @@ def visualize_2D_points(image, real_points, estimated_points):
 
 if __name__ == '__main__':
     
-    T_w_c1 = np.loadtxt('T_w_c1.txt')
 
     K_c = np.loadtxt('K_c.txt')
-    F_21 = np.loadtxt('F_21.txt')
-
-    X_w = np.loadtxt('X_w.txt')
+    #F_21 = np.loadtxt('F_21.txt')
+    #X_w = np.loadtxt('X_w.txt')
     # #Bring ground truth points to camera 1 reference (fixed)
-    X_c1_w = np.dot(np.linalg.inv(T_w_c1),X_w)
+    #X_c1_w = np.dot(np.linalg.inv(T_w_c1),X_w)
     T_w_c1 = np.eye(4)
-    X_w = X_c1_w
+    #X_w = X_c1_w
 
-    x1Data = np.loadtxt('x1Data.txt')
-    x2Data = np.loadtxt('x2Data.txt')
-    x3Data = np.loadtxt('x3Data.txt')
+    x1Data = np.loadtxt('x2_actual_RANSAC.txt')
+    x2Data = np.loadtxt('x3_RANSAC.txt')
+    x3Data = np.loadtxt('x1_RANSAC.txt')
 
-    img1 = cv2.cvtColor(cv2.imread('image1.png'), cv2.COLOR_BGR2RGB)
-    img2 = cv2.cvtColor(cv2.imread('image2.png'), cv2.COLOR_BGR2RGB)
-    img3 = cv2.cvtColor(cv2.imread('image3.png'), cv2.COLOR_BGR2RGB)
+    path_image_3 = './SuperGluePretrainedNetwork/assets/andres_samples_images/antigua.jpg'
+    path_image_1 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_1.jpg'
+    path_image_2 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_parallax1.jpg'
+
+    # Read images
+    img1 = cv2.cvtColor(cv2.imread(path_image_1), cv2.COLOR_BGR2RGB)
+    img2 = cv2.cvtColor(cv2.imread(path_image_2), cv2.COLOR_BGR2RGB)
+    img3 = cv2.cvtColor(cv2.imread(path_image_3), cv2.COLOR_BGR2RGB)
 
 
-    ####################################################################
-    #####################   LABORATORY 2  ##############################
-    ####################################################################
+    # ####################################################################
+    # #####################   LABORATORY 2  ##############################
+    # ####################################################################
 
     F_matches = compute_f_matrix(x1Data, x2Data)
     print("F matrix from matches:")
@@ -444,7 +451,7 @@ if __name__ == '__main__':
     print("Essential matrix from F_matches:")
     print(E)
 
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, X_w, visualize=False)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, visualize=True)
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
     print("SFM recovered camera pose T_c2_c1:")
@@ -481,7 +488,7 @@ if __name__ == '__main__':
 
     Op = theta+[azimuth, elevation] + X_computed[:3].flatten().tolist()
 
-    nPoints = X_w[1].shape[0]
+    nPoints = x1Data[1].shape[0]
     res = resBundleProjection(Op, x1Data, x2Data, K_c, nPoints)
 
     OpOptim = scOptim.least_squares(resBundleProjection, Op, args=(x1Data, x2Data, K_c, nPoints,), method='lm')
@@ -524,13 +531,14 @@ if __name__ == '__main__':
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
     
     #Unscaled
-    plot_3D(X_computed_OPT, X_w, [T_w_c1, np.linalg.inv(T_c2_c1)],0,"Unscaled 3D")
+    plot_3D(X_computed_OPT, [T_w_c1, np.linalg.inv(T_c2_c1)],0,"Unscaled 3D")
     
-    T_GT_c1 = np.loadtxt('T_w_c1.txt')
-    T_GT_c2 = np.loadtxt('T_w_c2.txt')
-    t_GT_c1 = T_GT_c1[:3, 3]
-    t_GT_c2 = T_GT_c2[:3, 3]
-    scale_factor = np.linalg.norm(t_GT_c1 - t_GT_c2)
+    # T_GT_c1 = np.loadtxt('T_w_c1.txt')
+    # T_GT_c2 = np.loadtxt('T_w_c2.txt')
+    # t_GT_c1 = T_GT_c1[:3, 3]
+    # t_GT_c2 = T_GT_c2[:3, 3]
+    # scale_factor = np.linalg.norm(t_GT_c1 - t_GT_c2)
+    scale_factor = 7.5 #meters
     print("Scale factor:")
     print(scale_factor)
 
@@ -541,11 +549,11 @@ if __name__ == '__main__':
     print(T_c2_c1_scaled)
 
     #Plot scaled points
-    plot_3D(X_computed_OPT_scaled, X_w, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
+    plot_3D(X_computed_OPT_scaled, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
     
-    #################
-    ######## 3 ###### Perspective-N-Point pose estimation of camera three 
-    #################
+    # # #################
+    # # ######## 3 ###### Perspective-N-Point pose estimation of camera three 
+    # # #################
 
     print("Exercise 3")
     imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
@@ -559,7 +567,7 @@ if __name__ == '__main__':
     T_c3_c1 = ensamble_T(R_c3_c1, tvec.flatten())
     print("T_c3_c1:")
     print(T_c3_c1)
-    plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
+    #plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
 
     #################
     ######## 4 ###### Bundle adjustment from 3 views  
@@ -567,7 +575,7 @@ if __name__ == '__main__':
     print("Exercise 4")
     F_2_matches = compute_f_matrix(x1Data, x2Data)
     E_2 = np.linalg.multi_dot([K_c.T,F_2_matches,K_c])
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error_2, X_computed = structure_from_motion(E_2, x1Data, x2Data, X_w,visualize=False)
+    R_c2_c1_chosen, t_c2_c1_chosen, min_error_2, X_computed = structure_from_motion(E_2, x1Data, x2Data,visualize=False)
 
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
@@ -586,7 +594,7 @@ if __name__ == '__main__':
     theta3 = crossMatrixInv(scipy.linalg.logm(R_c3_c1)) 
 
     xData = np.array([x1Data, x2Data, x3Data])
-    nPoints = X_w[1].shape[0]
+    nPoints = x1Data[1].shape[0]
     nCameras = 3 - 1 # we don't count the reference (1)
     Op = theta2+[azimuth2, elevation2] + theta3+[t_c3_c1[0], t_c3_c1[1], t_c3_c1[2]] + X_computed[:3].flatten().tolist()
 
@@ -633,7 +641,7 @@ if __name__ == '__main__':
     visualize_2D_points(img3, x3Data, points_c3_unnormalized)
 
     #Unscaled
-    plot_3D(X_w_computed_OPT, X_w, [T_w_c1,  np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Unscaled 3D cameras 1,2,3")
+    plot_3D(X_w_computed_OPT, [T_w_c1,  np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Unscaled 3D cameras 1,2,3")
     
     #Recover scale with ground truth
     X_w_computed_OPT_scaled = X_w_computed_OPT * scale_factor
@@ -641,5 +649,5 @@ if __name__ == '__main__':
     T_c2_c1_scaled = ensamble_T(R_2_1, t_2_1_scaled)
 
     #Plot scaled points
-    plot_3D(X_w_computed_OPT_scaled, X_w, [T_w_c1,  np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1,2,3")
+    plot_3D(X_w_computed_OPT_scaled, [T_w_c1,  np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1,2,3")
 
