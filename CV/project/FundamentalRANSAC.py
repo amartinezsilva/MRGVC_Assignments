@@ -185,9 +185,10 @@ if __name__ == '__main__':
         x2 = keypoints1[matches[valid]]
         
         x1 = np.array(x1).T
-        np.savetxt('x1.txt', x1)
+        print(x1.shape)
+        np.savetxt('x1_superglue.txt', x1, fmt='%1.8e', delimiter=' ')
         x2 = np.array(x2).T
-        np.savetxt('x2.txt', x2)
+        np.savetxt('x2_superglue.txt', x2, fmt='%1.8e', delimiter=' ')
 
         # matches_matrix = np.array(matches_matrix)
         # descriptors0 = npz['descriptors0']
@@ -299,10 +300,12 @@ if __name__ == '__main__':
 
     draw_epipolar_line_img2(F_21)
 
+    x1_RANSAC = np.zeros((2,np.array(best_inliers).shape[0]))
+    x2_RANSAC = np.zeros((2,np.array(best_inliers).shape[0]))
 
+    for i in range(np.array(best_inliers).shape[0]): # [1 2 3 6 7 8 10 12]
+        x1_RANSAC[:,i] = x1[:, best_inliers[i]]
+        x2_RANSAC[:,i] = x2[:, best_inliers[i]]
 
-
-
-
-
-    
+    np.savetxt('x1_RANSAC.txt', x1_RANSAC, fmt='%1.8e', delimiter=' ')
+    np.savetxt('x2_RANSAC.txt', x2_RANSAC, fmt='%1.8e', delimiter=' ')
