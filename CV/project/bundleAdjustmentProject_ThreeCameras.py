@@ -51,6 +51,193 @@ def drawRefSystem(ax, T_w_c, strStyle, nameStr):
     draw3DLine(ax, T_w_c[0:3, 3:4], T_w_c[0:3, 3:4] + T_w_c[0:3, 2:3], strStyle, 'b', 1)
     ax.text(np.squeeze( T_w_c[0, 3]+0.1), np.squeeze( T_w_c[1, 3]+0.1), np.squeeze( T_w_c[2, 3]+0.1), nameStr)
 
+def getNumberOfPointsInFrontOfCameras(P_c1, P_c2_estimated, T_c2_c1_estimated, x1Data, x2Data):
+    X_own_c1_estimated = triangulate_3D_diego(P_c1, P_c2_estimated, x1Data, x2Data)
+    third_col_c1_estimated = X_own_c1_estimated[:, 2]
+    positive_counter_c1_estimated = np.sum(third_col_c1_estimated > 0)
+    
+    X_own_c2_estimated = T_c2_c1_estimated @ X_own_c1_estimated
+    X_own_c2_estimated = X_own_c2_estimated / X_own_c2_estimated[3]
+    third_col_c2_estimated0 = X_own_c2_estimated[:, 2]
+    positive_counter_c2_estimated = np.sum(third_col_c2_estimated0 > 0)
+
+    plot_3D(X_own_c1_estimated, [T_w_c1, np.linalg.inv(T_c2_c1_estimated)], 1)
+    
+    return positive_counter_c1_estimated + positive_counter_c2_estimated
+
+def getCameraPose(K_c, F_c2_c1, x1Data, x2Data):
+    E_new2_new1= (K_c.T) @ F_c2_c1 @ K_c
+    
+    u, s, vt = np.linalg.svd(E_new2_new1)
+    
+    W = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
+    
+    R1 = u @ W @ vt # calcular determinante
+    np.linalg.det(R1)
+    if (np.round(np.linalg.det(R1)) == -1):
+        R1 *= -1
+    R2 = u @ W.T @ vt # calculo determinante y si sale -1 la multiplico por -1
+    np.linalg.det(R2)
+    if (np.round(np.linalg.det(R2)) == -1):
+        R2 *= -1
+        
+    t1 = u[:, 2]
+    t2 = -u[:, 2]
+    
+    T_c2_c1_estimated0 = np.vstack((np.hstack((R1, t1[:, np.newaxis])), [0, 0, 0, 1]))
+    T_c2_c1_estimated1 = np.vstack((np.hstack((R1, t2[:, np.newaxis])), [0, 0, 0, 1]))
+    T_c2_c1_estimated2 = np.vstack((np.hstack((R2, t1[:, np.newaxis])), [0, 0, 0, 1]))
+    T_c2_c1_estimated3 = np.vstack((np.hstack((R2, t2[:, np.newaxis])), [0, 0, 0, 1]))
+    
+    P_canonical = np.array([[1, 0, 0 ,0], [0, 1, 0 ,0], [0, 0, 1, 0]])
+    P_c1 = K_c @ P_canonical @ np.identity(4)
+    P_c2_estimated0 = K_c @ P_canonical @ T_c2_c1_estimated0 # Projecs from 3D new1 to new2
+    P_c2_estimated1 = K_c @ P_canonical @ T_c2_c1_estimated1 # Projecs from 3D new1 to new2
+    P_c2_estimated2 = K_c @ P_canonical @ T_c2_c1_estimated2 # Projecs from 3D new1 to new2
+    P_c2_estimated3 = K_c @ P_canonical @ T_c2_c1_estimated3 # Projecs from 3D new1 to new2
+    
+    return getCorrectCameraPoseEstimation(P_c1, P_c2_estimated0, P_c2_estimated1, P_c2_estimated2, P_c2_estimated3,
+                                   T_c2_c1_estimated0, T_c2_c1_estimated1, T_c2_c1_estimated2, T_c2_c1_estimated3, x1Data, x2Data)
+
+def getCorrectCameraPoseEstimation(P_c1, P_c2_estimated0, P_c2_estimated1, P_c2_estimated2, P_c2_estimated3,
+                                   T_c2_c1_estimated0, T_c2_c1_estimated1, T_c2_c1_estimated2, T_c2_c1_estimated3, x1Data, x2Data):
+    X_own_c1_toReturn = None
+    T_c2_c1_toReturn = None
+    max_positives = 0
+
+    nPoints_inFrontOfCamera_estimated0 = getNumberOfPointsInFrontOfCameras(P_c1, P_c2_estimated0, T_c2_c1_estimated0, x1Data, x2Data)
+    if nPoints_inFrontOfCamera_estimated0 > max_positives:
+        T_c2_c1_toReturn = T_c2_c1_estimated0
+        X_own_c1_toReturn = triangulate_3D_diego(P_c1, P_c2_estimated0, x1Data, x2Data)
+        max_positives = nPoints_inFrontOfCamera_estimated0
+    
+    nPoints_inFrontOfCamera_estimated1 = getNumberOfPointsInFrontOfCameras(P_c1, P_c2_estimated1, T_c2_c1_estimated1, x1Data, x2Data)
+    if nPoints_inFrontOfCamera_estimated1 > max_positives:
+        T_c2_c1_toReturn = T_c2_c1_estimated1
+        X_own_c1_toReturn = triangulate_3D_diego(P_c1, P_c2_estimated1, x1Data, x2Data)
+        max_positives = nPoints_inFrontOfCamera_estimated1
+    
+    nPoints_inFrontOfCamera_estimated2 = getNumberOfPointsInFrontOfCameras(P_c1, P_c2_estimated2, T_c2_c1_estimated2, x1Data, x2Data)
+    if nPoints_inFrontOfCamera_estimated2 > max_positives:
+        T_c2_c1_toReturn = T_c2_c1_estimated2
+        X_own_c1_toReturn = triangulate_3D_diego(P_c1, P_c2_estimated2, x1Data, x2Data)
+        max_positives = nPoints_inFrontOfCamera_estimated2
+    
+    nPoints_inFrontOfCamera_estimated3 = getNumberOfPointsInFrontOfCameras(P_c1, P_c2_estimated3, T_c2_c1_estimated3, x1Data, x2Data)
+    if nPoints_inFrontOfCamera_estimated3 > max_positives:
+        T_c2_c1_toReturn = T_c2_c1_estimated3
+        X_own_c1_toReturn = triangulate_3D_diego(P_c1, P_c2_estimated3, x1Data, x2Data)
+        max_positives = nPoints_inFrontOfCamera_estimated3
+    
+    return T_c2_c1_toReturn, X_own_c1_toReturn
+
+def triangulate_3D_raul(P1, P2, x1, x2): 
+    n_matches = x1.shape[1]
+    X_computed = []
+
+    for i in range(n_matches):
+        A = np.vstack((
+            P1[2] * x1[0,i] - P1[0],
+            P1[2] * x1[1,i] - P1[0],
+            P2[2] * x2[0,i] - P2[0],
+            P2[2] * x2[1,i] - P2[0],
+        ))
+        u, s, vh = np.linalg.svd(A)
+        point_3d = vh[-1, :]
+        point_3d /= point_3d[3]
+        X_computed.append(point_3d)
+
+    return np.array(X_computed).T
+
+def triangulate_3D_diego(P_c1, P_c2, x1Data, x2Data):
+    A = np.ones([4,4])
+    X_own = np.ones([x1Data.shape[1], 4])
+    print("2d points")
+    print(x1Data.shape)
+    for i in range(x1Data.shape[1]):
+        A[0][0] = P_c1[2][0] * x1Data[0][i] - P_c1[0][0]
+        A[0][1] = P_c1[2][1] * x1Data[0][i] - P_c1[0][1]
+        A[0][2] = P_c1[2][2] * x1Data[0][i] - P_c1[0][2]
+        A[0][3] = P_c1[2][3] * x1Data[0][i] - P_c1[0][3]
+        
+        A[1][0] = P_c1[2][0] * x1Data[1][i] - P_c1[1][0]
+        A[1][1] = P_c1[2][1] * x1Data[1][i] - P_c1[1][1]
+        A[1][2] = P_c1[2][2] * x1Data[1][i] - P_c1[1][2]
+        A[1][3] = P_c1[2][3] * x1Data[1][i] - P_c1[1][3]
+        
+        A[2][0] = P_c2[2][0] * x2Data[0][i] - P_c2[0][0]
+        A[2][1] = P_c2[2][1] * x2Data[0][i] - P_c2[0][1]
+        A[2][2] = P_c2[2][2] * x2Data[0][i] - P_c2[0][2]
+        A[2][3] = P_c2[2][3] * x2Data[0][i] - P_c2[0][3]
+        
+        A[3][0] = P_c2[2][0] * x2Data[1][i] - P_c2[1][0]
+        A[3][1] = P_c2[2][1] * x2Data[1][i] - P_c2[1][1]
+        A[3][2] = P_c2[2][2] * x2Data[1][i] - P_c2[1][2]
+        A[3][3] = P_c2[2][3] * x2Data[1][i] - P_c2[1][3]
+        
+        _, _, vh = np.linalg.svd(A)
+        point = vh[-1, :]
+        point_n = point / point[3]
+        X_own[i, :] = point_n
+        
+    print("trinagulados")
+    print(X_own.shape)
+    X_own = X_own.T
+    return X_own
+
+def triangulate_3D_us(P1, P2, x1, x2):
+
+    n_matches = x1.shape[1]
+
+    X_computed = np.zeros((4,len(x1[0][:])))
+
+    for i in range(n_matches):
+
+        #print("Point: ", i)
+        A = np.zeros((4,4))
+        
+        #Equations C1
+        #First row
+        A[0][0] = P1[2][0]*x1[0,i] - P1[0][0]
+        A[0][1] = P1[2][1]*x1[0,i] - P1[0][1]
+        A[0][2] = P1[2][2]*x1[0,i] - P1[0][2]
+        A[0][3] = P1[2][3]*x1[0,i] - P1[0][3]
+        #Second row
+        A[1][0] = P1[2][0]*x1[1,i] - P1[1][0]
+        A[1][1] = P1[2][1]*x1[1,i] - P1[1][1]
+        A[1][2] = P1[2][2]*x1[1,i] - P1[1][2]
+        A[1][3] = P1[2][3]*x1[1,i] - P1[1][3]
+
+        #Equations C2
+
+        A[2][0] = P2[2][0]*x2[0,i] - P2[0][0]
+        A[2][1] = P2[2][1]*x2[0,i] - P2[0][1]
+        A[2][2] = P2[2][2]*x2[0,i] - P2[0][2]
+        A[2][3] = P2[2][3]*x2[0,i] - P2[0][3]
+        #Second row
+        A[3][0] = P2[2][0]*x2[1,i] - P2[1][0]
+        A[3][1] = P2[2][1]*x2[1,i] - P2[1][1]
+        A[3][2] = P2[2][2]*x2[1,i] - P2[1][2]
+        A[3][3] = P2[2][3]*x2[1,i] - P2[1][3]
+
+        u, s, vh = np.linalg.svd(A)
+        X = np.reshape(vh[-1, :],(4,1))
+
+        X = X / X[3][0]
+
+        X_computed[0][i] = X[0][0]
+        X_computed[1][i] = X[1][0]
+        X_computed[2][i] = X[2][0]
+        X_computed[3][i] = X[3][0]
+
+        # print("3D point SVD:")
+        # print(X)
+    
+    #Bring points to camera 1 frame
+    X_computed = np.dot(T_c1_c2, X_computed)
+
+    return X_computed
+
 def triangulate_3D(x1,x2,T_c2_c1):
 
     n_matches = x1.shape[1]
@@ -202,9 +389,34 @@ def plot_3D(X_computed, transforms, idx, title="Untitled"):
     ax.set_xlabel('X')
     ax.set_ylabel('Y')
     ax.set_zlabel('Z')
+    
+    sum_y = 0
+    sum_x = 0
+    X_computed_plot = np.zeros((X_computed.shape[0], X_computed.shape[1]))
+    for index in range(X_computed_plot.shape[1]):
+        X_computed_plot[0, index] = X_computed[0, index]
+        X_computed_plot[1, index] = X_computed[1, index]
+        X_computed_plot[2, index] = X_computed[2, index]
+
+    for index in range(X_computed_plot.shape[1]):
+        sum_y += X_computed_plot[1, index]
+        sum_x += X_computed_plot[0, index]
+
+    average_y = sum_y / X_computed_plot.shape[1]
+    average_x = sum_x / X_computed_plot.shape[1]
+
+    for index in range(X_computed_plot.shape[1]):
+        X_computed_plot[1, index] = X_computed_plot[1, index] - average_y
+        X_computed_plot[1, index] = - X_computed_plot[1, index]
+        X_computed_plot[1, index] = X_computed_plot[1, index] + average_y
+        X_computed_plot[0, index] = X_computed_plot[0, index] - average_x
+        X_computed_plot[0, index] = - X_computed_plot[0, index]
+        X_computed_plot[0, index] = X_computed_plot[0, index] + average_x
 
     for cam_idx,T_w_c in enumerate(transforms):
     #drawRefSystem(ax, np.eye(4, 4), '-', 'W')
+        if cam_idx != 0:
+            transforms[1][0, 3] = -transforms[1][0, 3]
         drawRefSystem(ax, T_w_c, '-', 'C'+str(cam_idx+1))
 
     #Plot only provided GT
@@ -213,7 +425,7 @@ def plot_3D(X_computed, transforms, idx, title="Untitled"):
     
     #Plot points for comparison
     #if(not (X_computed == X_w).all()):
-        ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
+        ax.scatter(X_computed_plot[0, :], X_computed_plot[1, :], X_computed_plot[2, :], marker='.', label = "estimated")
         #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
         ax.legend()
@@ -472,14 +684,16 @@ if __name__ == '__main__':
     E = np.linalg.multi_dot([K_c.T,F_matches,K_c])
     print("Essential matrix from F_matches:")
     print(E)
-
+    # T_c2_c1, X_computed = getCameraPose(K_c, F_matches, x1Data, x2Data)
     R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, visualize=True)
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
-
+    R_c2_c1_chosen = T_c2_c1[:3, :3]
+    t_c2_c1_chosen = T_c2_c1[:3, 3]
     print("SFM recovered camera pose T_c2_c1:")
     print(T_c2_c1)
-    print("error of R and t chosen: ", min_error)
-
+    print("puntos 3D")
+    print(X_computed.shape)
+    # print("error of R and t chosen: ", min_error)
 
     ######## visualize points with error ########
 
@@ -555,7 +769,10 @@ if __name__ == '__main__':
     #Unscaled
     plot_3D(X_computed_OPT, [T_w_c1, np.linalg.inv(T_c2_c1)],0,"Unscaled 3D")
     
-    scale_factor = 7.5 #meters
+    x_measure = X_computed_OPT[0, 146] - X_computed_OPT[0, 229]
+    y_measure = X_computed_OPT[1, 146] - X_computed_OPT[1, 229]
+    dist_measure = np.sqrt(x_measure * x_measure + y_measure * y_measure)
+    scale_factor = 8.5 #meters
     print("Scale factor:")
     print(scale_factor)
 
@@ -566,18 +783,29 @@ if __name__ == '__main__':
     print(T_c2_c1_scaled)
 
     #Plot scaled points
-    plot_3D(X_computed_OPT_scaled, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
+    P = calculate_P_matrix(x3Data, X_computed)
+    print(P)
+    M = P [:3, :3]
+    print(np.sign(np.linalg.det(M))* P)
+    K_c3, R_c3_c1, t_c3_c1, _, _, _, _ = cv2.decomposeProjectionMatrix(np.sign(np.linalg.det(M)) * P)
+    print(K_c3)
+    print(R_c3_c1)
+    print(t_c3_c1)
+    t_c3_c1 = t_c3_c1 / t_c3_c1[3]
+    t_c3_c1 = t_c3_c1[0:3]
+
+    T_c3_c1 = ensamble_T(R_c3_c1, t_c3_c1.flatten())
+    
+    plot_3D(X_computed_OPT_scaled, [T_w_c1, np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1 and 2")
 
     np.savetxt('X_new.txt', X_computed_OPT, fmt='%1.8e', delimiter=' ')
     
     # # #################
     # # ######## 3 ###### Perspective-N-Point pose estimation of camera three 
     # # #################
-
     print("Exercise 3")
-    P = calculate_P_matrix(x3Data, X_computed_OPT)
-    M = P [:3, :3]
-    K_c3, R_c3_c1, t_c3_c1 = cv2.decomposeProjectionMatrix(np.sign(np.linalg.det(M)) @ P)
+
+
     # imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
     # objectPoints = np.ascontiguousarray(X_computed_OPT[0:3, :].T).reshape((X_computed_OPT.shape[1], 1, 3)) 
     # retval, rvec, tvec  = cv2.solvePnP(objectPoints, imagePoints, K_c, distCoeffs=None ,flags=cv2.SOLVEPNP_EPNP)
@@ -586,7 +814,6 @@ if __name__ == '__main__':
     # R_c3_c1 = scipy.linalg.expm(crossMatrix(rvec))
     # t_c3_c1 = tvec.flatten()
 
-    T_c3_c1 = ensamble_T(R_c3_c1, t_c3_c1.flatten())
     print("T_c3_c1:")
     print(T_c3_c1)
     #plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
