@@ -184,7 +184,7 @@ def structure_from_motion(E, x1, x2, visualize=True):
         #     selected_R = R
         #     selected_t = t
         #     X_computed_selected = X_computed
-        if(idx == 0):
+        if(idx == 3):
             selected_R = R
             selected_t = t
             X_computed_selected = X_computed
@@ -322,7 +322,7 @@ def get_2D_points(X_w, T_c_w, K_c):
     return points_c_unnormalized, points_c
 
 
-def resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras):
+def resBundleProjectionNCameras(Op, xData, K_c, K_c3, nPoints, nCameras):
     """
     -input:
     Op: Optimization parameters for all cameras and 3D points
@@ -369,7 +369,7 @@ def resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras):
         t = Op[idx + 3:idx + 6]
         R = scipy.linalg.expm(crossMatrix(theta))
         T = ensamble_T(R, t)
-        points_unnormalized, points = get_2D_points(X_w_computed, T, K_c)
+        points_unnormalized, points = get_2D_points(X_w_computed, T, K_c3)
         e = xData[2+i, :, :] - points[0:2]
         res += e.flatten().tolist()
 
@@ -414,6 +414,24 @@ def visualize_2D_points(image, real_points, estimated_points):
     # Show the plot
     plt.show()
 
+def calculate_P_matrix(matches, points_3d):
+    n_matches = matches.shape[1]
+    
+    # Construct the matrix A
+    A = np.zeros((2 * n_matches, 12))
+    for i in range(n_matches):
+        x, y = matches[0][i], matches[1][i]
+        X, Y, Z, W = points_3d[0][i], points_3d[1][i], points_3d[2][i], points_3d[3][i]
+        
+        A[2 * i] = [-X, -Y, -Z, -W, 0, 0, 0, 0, x * X, x * Y, x * Z, x * W]
+        A[2 * i + 1] = [0, 0, 0, 0, -X, -Y, -Z, -W, y * X, y * Y, y * Z, y * W]
+    
+    # Solve for the homogeneous solution using SVD
+    u, s, vh = np.linalg.svd(A)
+    P = vh[-1].reshape((3, 4))
+    
+    return P
+
 if __name__ == '__main__':
     
 
@@ -433,9 +451,9 @@ if __name__ == '__main__':
     x2Data = np.loadtxt('x_p1_p_kept.txt')
     x3Data = np.loadtxt('x_o1_o_kept.txt')
 
-    path_image_3 = './SuperGluePretrainedNetwork/assets/andres_samples_images/antigua.jpg'
-    path_image_1 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_1.jpg'
-    path_image_2 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_parallax1.jpg'
+    path_image_3 = './SuperGluePretrainedNetwork/assets/luis_samples_images/antigua.jpg'
+    path_image_1 = './SuperGluePretrainedNetwork/assets/luis_samples_images/img_1.jpg'
+    path_image_2 = './SuperGluePretrainedNetwork/assets/luis_samples_images/img_parallax_1.jpg'
 
     # Read images
     img1 = cv2.cvtColor(cv2.imread(path_image_1), cv2.COLOR_BGR2RGB)
@@ -557,15 +575,18 @@ if __name__ == '__main__':
     # # #################
 
     print("Exercise 3")
-    imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
-    objectPoints = np.ascontiguousarray(X_computed_OPT[0:3, :].T).reshape((X_computed_OPT.shape[1], 1, 3)) 
-    retval, rvec, tvec  = cv2.solvePnP(objectPoints, imagePoints, K_c, distCoeffs=None ,flags=cv2.SOLVEPNP_EPNP)
+    P = calculate_P_matrix(x3Data, X_computed_OPT)
+    M = P [:3, :3]
+    K_c3, R_c3_c1, t_c3_c1 = cv2.decomposeProjectionMatrix(np.sign(np.linalg.det(M)) @ P)
+    # imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
+    # objectPoints = np.ascontiguousarray(X_computed_OPT[0:3, :].T).reshape((X_computed_OPT.shape[1], 1, 3)) 
+    # retval, rvec, tvec  = cv2.solvePnP(objectPoints, imagePoints, K_c, distCoeffs=None ,flags=cv2.SOLVEPNP_EPNP)
 
     # R, _ = cv2.Rodrigues(rvec)
-    R_c3_c1 = scipy.linalg.expm(crossMatrix(rvec))
-    t_c3_c1 = tvec.flatten()
+    # R_c3_c1 = scipy.linalg.expm(crossMatrix(rvec))
+    # t_c3_c1 = tvec.flatten()
 
-    T_c3_c1 = ensamble_T(R_c3_c1, tvec.flatten())
+    T_c3_c1 = ensamble_T(R_c3_c1, t_c3_c1.flatten())
     print("T_c3_c1:")
     print(T_c3_c1)
     #plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
@@ -582,7 +603,7 @@ if __name__ == '__main__':
 
     points_c1_unnormalized, points_c1 = get_2D_points(X_computed, T_c1_w, K_c)
     points_c2_unnormalized, points_c2 = get_2D_points(X_computed, T_c2_c1, K_c)
-    points_c3_unnormalized, points_c3 = get_2D_points(X_computed, T_c3_c1, K_c)
+    points_c3_unnormalized, points_c3 = get_2D_points(X_computed, T_c3_c1, K_c3)
 
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
@@ -599,9 +620,9 @@ if __name__ == '__main__':
     nCameras = 3 - 1 # we don't count the reference (1)
     Op = theta2+[azimuth2, elevation2] + theta3+[t_c3_c1[0], t_c3_c1[1], t_c3_c1[2]] + X_computed[:3].flatten().tolist()
 
-    res = resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras)
+    res = resBundleProjectionNCameras(Op, xData, K_c, K_c3, nPoints, nCameras)
 
-    OpOptim = scOptim.least_squares(resBundleProjectionNCameras, Op, args=(xData, K_c, nPoints, nCameras,), method='lm')
+    OpOptim = scOptim.least_squares(resBundleProjectionNCameras, Op, args=(xData, K_c, K_c3, nPoints, nCameras,), method='lm')
 
     X_w_list_OPT = []
     X_w_list_OPT = OpOptim.x[5 + (nCameras-1) * 6:]
@@ -635,7 +656,7 @@ if __name__ == '__main__':
     print("T_c3_c1 optimized:")
     print(T_c3_c1)
 
-    points_c3_unnormalized, points_c3 = get_2D_points(X_w_computed_OPT, T_c3_c1, K_c)
+    points_c3_unnormalized, points_c3 = get_2D_points(X_w_computed_OPT, T_c3_c1, K_c3)
     
     visualize_2D_points(img1, x1Data, points_c1_unnormalized)
     visualize_2D_points(img2, x2Data, points_c2_unnormalized)
