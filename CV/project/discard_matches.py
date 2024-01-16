@@ -6,7 +6,7 @@ import cv2
 import glob
 import matplotlib.pyplot as plt
 
-def visualize_2D_points(image, points):
+def visualize_2D_points(image, real_points, estimated_points):
     """
     Visualize real and estimated 2D points on an image.
 
@@ -23,8 +23,16 @@ def visualize_2D_points(image, points):
     ax.imshow(image)
 
     # Plot real points with red arrows
-    ax.quiver(points[0],points[1], np.zeros_like(points[0]), np.zeros_like(points[1]),
-              angles='xy', scale_units='xy', scale=1, color='red', label='Matches')
+    ax.quiver(real_points[0], real_points[1], np.zeros_like(real_points[0]), np.zeros_like(real_points[1]),
+              angles='xy', scale_units='xy', scale=1, color='red', label='Kept Points')
+
+    # Plot estimated points with blue arrows
+    ax.quiver(estimated_points[0], estimated_points[1], np.zeros_like(estimated_points[0]), np.zeros_like(estimated_points[1]),
+              angles='xy', scale_units='xy', scale=1, color='blue', label='Discarded Points')
+
+    # # Plot lines connecting corresponding points
+    # for real_point, estimated_point in zip(real_points.T, estimated_points.T):
+    #     ax.plot([real_point[0], estimated_point[0]], [real_point[1], estimated_point[1]], 'black', linestyle='dashed')
 
     # Set axis limits
     ax.set_xlim([0, image.shape[1]])
@@ -34,7 +42,7 @@ def visualize_2D_points(image, points):
     ax.legend()
 
     # Show the plot
-    #plt.show()
+    plt.show()
 
 
 def visualize_matches(img1, kp1, img2, kp2, matches):
@@ -62,8 +70,8 @@ if __name__ == '__main__':
     print("Number of matches with the old: ")
     print(x_o1_1.shape[1])
 
-    threshold_error = 1
-    index_list = []
+    threshold_error = 5
+    index_list_kept = []
 
     ##Select points
 
@@ -73,31 +81,36 @@ if __name__ == '__main__':
             error_y = x_o1_1[1,i] - x_p1_1[1,j]
 
             if np.sqrt(error_x * error_x + error_y * error_y) < threshold_error:
-                index_list.append(i)
+                index_list_kept.append(i)
+
+    index_list_discarded = [i for i in range(x_o1_1.shape[1]) if i not in index_list_kept]
 
     print("Number of final matches: ")
-    print(len(index_list))
+    print(len(index_list_kept))
+    print("Number of discarded matches: ")
+    print(len(index_list_discarded))
 
-    x_p1_1_discard = np.zeros((2,np.array(index_list).shape[0]))
-    x_o1_o_discard = np.zeros((2,np.array(index_list).shape[0]))
-    x_p1_p_discard = np.zeros((2,np.array(index_list).shape[0]))
+    x_p1_1_kept = np.zeros((2,np.array(index_list_kept).shape[0]))
+    x_o1_1_kept = np.zeros((2,np.array(index_list_kept).shape[0]))
 
-    for i in range(np.array(index_list).shape[0]): # [1 2 3 6 7 8 10 12]
-        x_p1_1_discard[:,i] = x_p1_1[:, index_list[i]]
-        x_o1_o_discard[:,i] = x_o1_o[:, index_list[i]]
-        x_p1_p_discard[:,i] = x_p1_p[:, index_list[i]]
+    for i in range(np.array(index_list_kept).shape[0]): # [1 2 3 6 7 8 10 12]
+        x_p1_1_kept[:,i] = x_p1_1[:, index_list_kept[i]]
+        x_o1_1_kept[:,i] = x_o1_1[:, index_list_kept[i]]
 
-    print(x_o1_o_discard.shape)
-    print(x_p1_1_discard.shape)
-    print(x_p1_p_discard.shape)
+    # np.savetxt('x_p1_1_kept.txt', x_p1_1_kept, fmt='%1.8e', delimiter=' ')
+    # np.savetxt('x_o1_o_kept.txt', x_o1_o_kept, fmt='%1.8e', delimiter=' ')
+    # np.savetxt('x_p1_p_kept.txt', x_p1_p_kept, fmt='%1.8e', delimiter=' ')
 
-    np.savetxt('x_p1_1_discard.txt', x_p1_1_discard, fmt='%1.8e', delimiter=' ')
-    np.savetxt('x_o1_o_discard.txt', x_o1_o_discard, fmt='%1.8e', delimiter=' ')
-    np.savetxt('x_p1_p_discard.txt', x_p1_p_discard, fmt='%1.8e', delimiter=' ')
+    x_p1_1_discarded = np.zeros((2,np.array(index_list_discarded).shape[0]))
+    x_o1_1_discarded = np.zeros((2,np.array(index_list_discarded).shape[0]))
 
-    visualize_2D_points(img1, x_p1_1_discard)
-    visualize_2D_points(img2, x_p1_p_discard)
-    visualize_2D_points(img3, x_o1_o_discard)
+    for i in range(np.array(index_list_discarded).shape[0]): # [1 2 3 6 7 8 10 12]
+        x_p1_1_discarded[:,i] = x_p1_1[:, index_list_discarded[i]]
+        x_o1_1_discarded[:,i] = x_o1_1[:, index_list_discarded[i]]
+
+    visualize_2D_points(img1, x_o1_1_kept, x_o1_1_discarded)
+    # visualize_2D_points(img2, x_p1_p_kept, x_p1_p_discarded)
+    # visualize_2D_points(img3, x_o1_o_kept, x_o1_o_discarded)
     plt.show()
 
     # #Visualize matches
