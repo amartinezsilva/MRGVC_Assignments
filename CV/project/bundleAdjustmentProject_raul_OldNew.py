@@ -112,6 +112,24 @@ def triangulate_3D(x1,x2,T_c2_c1):
 
     return X_computed
 
+def triangulate_3D_raul(x1,x2,P1, P2): 
+    n_matches = x1.shape[1]
+    X_computed = []
+
+    for i in range(n_matches):
+        A = np.vstack((
+            P1[2] * x1[0,i] - P1[0],
+            P1[2] * x1[1,i] - P1[0],
+            P2[2] * x2[0,i] - P2[0],
+            P2[2] * x2[1,i] - P2[0],
+        ))
+        u, s, vh = np.linalg.svd(A)
+        point_3d = vh[-1, :]
+        point_3d /= point_3d[3]
+        X_computed.append(point_3d)
+
+    return np.array(X_computed).T
+
 def compute_f_matrix(x1, x2):
     n_matches = x1.shape[1]
     A = np.zeros((n_matches, 9))
@@ -136,6 +154,66 @@ def compute_f_matrix(x1, x2):
     F_matches = F_matches_vector.reshape((3, 3))
 
     return F_matches
+
+def structure_from_motion_raul(E, x1, x2, visualize=True):
+    u, s, vh = np.linalg.svd(E)
+    
+    W = np.reshape((0, -1, 0, 1, 0, 0, 0, 0, 1), (3, 3))
+    t = u[:,2]
+
+    R_p90 = u @ W @ vh
+    R_m90 = u @ W.T @ vh
+
+    P1 = K_c @ ensamble_T(np.diag((1, 1, 1)), (0, 0, 0))[0:3]
+
+    R_opt = [R_p90, R_p90, R_m90, R_m90]
+    t_opt = [t, -t, t, -t]
+
+    for i in range(len(R_opt)):
+        if np.linalg.det(R_opt[i]) < 0:
+            R_opt[i] = -R_opt[i]
+            t_opt[i] = -t_opt[i]
+
+    P2_opt = []
+    for i in range(len(R_opt)):
+        P2_opt.append(K_c @ ensamble_T(R_opt[i], t_opt[i])[0:3])
+
+    results_opt = np.zeros((4,1))
+    for i in range(x1.shape[1]):
+        for j, P2_j in enumerate(P2_opt):
+            A = np.vstack((
+                P1[2] * x1[0,i] - P1[0],
+                P1[2] * x1[1,i] - P1[1],
+                P2_j[2] * x2[0,i] - P2_j[0],
+                P2_j[2] * x2[1,i] - P2_j[1]
+            ))
+            u, s, vh = np.linalg.svd(A)
+            point_3D = vh[-1, :]
+            point_3D /= point_3D[3]
+
+            # https://cmsc426.github.io/sfm/
+            if point_3D[2] > 0 and (R_opt[j][2,:] @ (point_3D[0:3] - t_opt[j])) > 0:
+                # The point is in front of both cameras
+                results_opt[j] += 1
+    opt = np.argmax(results_opt)
+    P2 = P2_opt[opt]
+
+
+    X_c1 = triangulate_3D_raul(x1, x2, P1, P2)
+
+    x1_p = P1 @ X_c1
+    x2_p = P2 @ X_c1
+    x1_p /= x1_p[2, :]
+    x2_p /= x2_p[2, :]
+
+    T_c2_c1 = np.eye(4)
+    T_c2_c1[:3, :3] = R_opt[opt]
+    T_c2_c1[:3, 3] = t_opt[opt]
+    T_c2_c1[3, 3] = 1
+
+    if(visualize): plot_3D(X_c1, [T_w_c1, np.linalg.inv(T_c2_c1)], 1)
+
+    return P1, P2, R_opt[opt], t_opt[opt], X_c1
 
 def structure_from_motion(E, x1, x2, visualize=True):
     u, s, vh = np.linalg.svd(E)
@@ -184,7 +262,7 @@ def structure_from_motion(E, x1, x2, visualize=True):
         #     selected_R = R
         #     selected_t = t
         #     X_computed_selected = X_computed
-        if(idx == 3):
+        if(idx == 1):
             selected_R = R
             selected_t = t
             X_computed_selected = X_computed
@@ -438,8 +516,9 @@ if __name__ == '__main__':
     img2 = cv2.cvtColor(cv2.imread(path_image_2), cv2.COLOR_BGR2RGB)
     img3 = cv2.cvtColor(cv2.imread(path_image_3), cv2.COLOR_BGR2RGB)
 
+
     # ####################################################################
-    # #####################   Triangulation & optimization 2 new images  ##############################
+    # #####################   LABORATORY 2  ##############################
     # ####################################################################
 
     F_matches = compute_f_matrix(x1Data, x2Data)
@@ -450,12 +529,14 @@ if __name__ == '__main__':
     print("Essential matrix from F_matches:")
     print(E)
 
-    R_c2_c1_chosen, t_c2_c1_chosen, min_error, X_computed = structure_from_motion(E, x1Data, x2Data, visualize=True)
+    P1 = np.eye(4)
+    P2 = np.eye(4)
+    P1, P2, R_c2_c1_chosen, t_c2_c1_chosen, X_computed = structure_from_motion_raul(E, x1Data, x2Data, visualize=True)
     T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
 
     print("SFM recovered camera pose T_c2_c1:")
     print(T_c2_c1)
-    print("error of R and t chosen: ", min_error)
+    # print("error of R and t chosen: ", min_error)
 
 
     ######## visualize points with error ########
@@ -537,7 +618,7 @@ if __name__ == '__main__':
     # t_GT_c1 = T_GT_c1[:3, 3]
     # t_GT_c2 = T_GT_c2[:3, 3]
     # scale_factor = np.linalg.norm(t_GT_c1 - t_GT_c2)
-    scale_factor = 8.0 #meters
+    scale_factor = 7.5 #meters
     print("Scale factor:")
     print(scale_factor)
 
@@ -549,106 +630,104 @@ if __name__ == '__main__':
 
     #Plot scaled points
     plot_3D(X_computed_OPT_scaled, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
-
-    np.savetxt('X_oldnew.txt', X_computed_OPT, fmt='%1.8e', delimiter=' ')
- 
-    # # # #################
-    # # # ######## 3 ###### Perspective-N-Point pose estimation of camera three 
-    # # # #################
-
-    # print("Exercise 3")
-    # imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
-    # objectPoints = np.ascontiguousarray(X_computed_OPT[0:3, :].T).reshape((X_computed_OPT.shape[1], 1, 3)) 
-    # retval, rvec, tvec  = cv2.solvePnP(objectPoints, imagePoints, K_c, distCoeffs=None ,flags=cv2.SOLVEPNP_EPNP)
-
-    # # R, _ = cv2.Rodrigues(rvec)
-    # R_c3_c1 = scipy.linalg.expm(crossMatrix(rvec))
-    # t_c3_c1 = tvec.flatten()
-
-    # T_c3_c1 = ensamble_T(R_c3_c1, tvec.flatten())
-    # print("T_c3_c1:")
-    # print(T_c3_c1)
-    # #plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
-
-    # #################
-    # ######## 4 ###### Bundle adjustment from 3 views  
-    # #################
-    # print("Exercise 4")
-    # F_2_matches = compute_f_matrix(x1Data, x2Data)
-    # E_2 = np.linalg.multi_dot([K_c.T,F_2_matches,K_c])
-    # R_c2_c1_chosen, t_c2_c1_chosen, min_error_2, X_computed = structure_from_motion(E_2, x1Data, x2Data,visualize=False)
-
-    # T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
-
-    # points_c1_unnormalized, points_c1 = get_2D_points(X_computed, T_c1_w, K_c)
-    # points_c2_unnormalized, points_c2 = get_2D_points(X_computed, T_c2_c1, K_c)
-    # points_c3_unnormalized, points_c3 = get_2D_points(X_computed, T_c3_c1, K_c)
-
-    # visualize_2D_points(img1, x1Data, points_c1_unnormalized)
-    # visualize_2D_points(img2, x2Data, points_c2_unnormalized)
-    # visualize_2D_points(img3, x3Data, points_c3_unnormalized)
-
-    # theta2 = crossMatrixInv(scipy.linalg.logm(R_c2_c1_chosen)) 
-    # elevation2 = np.arccos(t_c2_c1_chosen[2])
-    # azimuth2 = np.arcsin(t_c2_c1_chosen[0] / np.sin(elevation2))
-
-    # theta3 = crossMatrixInv(scipy.linalg.logm(R_c3_c1)) 
-
-    # xData = np.array([x1Data, x2Data, x3Data])
-    # nPoints = x1Data[1].shape[0]
-    # nCameras = 3 - 1 # we don't count the reference (1)
-    # Op = theta2+[azimuth2, elevation2] + theta3+[t_c3_c1[0], t_c3_c1[1], t_c3_c1[2]] + X_computed[:3].flatten().tolist()
-
-    # res = resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras)
-
-    # OpOptim = scOptim.least_squares(resBundleProjectionNCameras, Op, args=(xData, K_c, nPoints, nCameras,), method='lm')
-
-    # X_w_list_OPT = []
-    # X_w_list_OPT = OpOptim.x[5 + (nCameras-1) * 6:]
-    # X_w_computed_OPT = np.array(X_w_list_OPT).reshape((3, nPoints))
-    # X_w_computed_OPT = np.vstack((X_w_computed_OPT, np.ones((1, nPoints))))  # homogeneous coords
     
-    # #### Camera 1
-    # points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed_OPT, T_c1_w, K_c)
+    # # #################
+    # # ######## 3 ###### Perspective-N-Point pose estimation of camera three 
+    # # #################
+
+    print("Exercise 3")
+    imagePoints = np.ascontiguousarray(x3Data[0:2, :].T).reshape((x3Data.shape[1], 1, 2)) 
+    objectPoints = np.ascontiguousarray(X_computed_OPT[0:3, :].T).reshape((X_computed_OPT.shape[1], 1, 3)) 
+    retval, rvec, tvec  = cv2.solvePnP(objectPoints, imagePoints, K_c, distCoeffs=None ,flags=cv2.SOLVEPNP_EPNP)
+
+    # R, _ = cv2.Rodrigues(rvec)
+    R_c3_c1 = scipy.linalg.expm(crossMatrix(rvec))
+    t_c3_c1 = tvec.flatten()
+
+    T_c3_c1 = ensamble_T(R_c3_c1, tvec.flatten())
+    print("T_c3_c1:")
+    print(T_c3_c1)
+    #plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")
+
+    #################
+    ######## 4 ###### Bundle adjustment from 3 views  
+    #################
+    print("Exercise 4")
+    F_2_matches = compute_f_matrix(x1Data, x2Data)
+    E_2 = np.linalg.multi_dot([K_c.T,F_2_matches,K_c])
+    P1, P2, R_c2_c1_chosen, t_c2_c1_chosen, X_computed = structure_from_motion_raul(E_2, x1Data, x2Data,visualize=True)
+
+    T_c2_c1 = ensamble_T(R_c2_c1_chosen, t_c2_c1_chosen)
+
+    points_c1_unnormalized, points_c1 = get_2D_points(X_computed, T_c1_w, K_c)
+    points_c2_unnormalized, points_c2 = get_2D_points(X_computed, T_c2_c1, K_c)
+    points_c3_unnormalized, points_c3 = get_2D_points(X_computed, T_c3_c1, K_c)
+
+    visualize_2D_points(img1, x1Data, points_c1_unnormalized)
+    visualize_2D_points(img2, x2Data, points_c2_unnormalized)
+    visualize_2D_points(img3, x3Data, points_c3_unnormalized)
+
+    theta2 = crossMatrixInv(scipy.linalg.logm(R_c2_c1_chosen)) 
+    elevation2 = np.arccos(t_c2_c1_chosen[2])
+    azimuth2 = np.arcsin(t_c2_c1_chosen[0] / np.sin(elevation2))
+
+    theta3 = crossMatrixInv(scipy.linalg.logm(R_c3_c1)) 
+
+    xData = np.array([x1Data, x2Data, x3Data])
+    nPoints = x1Data[1].shape[0]
+    nCameras = 3 - 1 # we don't count the reference (1)
+    Op = theta2+[azimuth2, elevation2] + theta3+[t_c3_c1[0], t_c3_c1[1], t_c3_c1[2]] + X_computed[:3].flatten().tolist()
+
+    res = resBundleProjectionNCameras(Op, xData, K_c, nPoints, nCameras)
+
+    OpOptim = scOptim.least_squares(resBundleProjectionNCameras, Op, args=(xData, K_c, nPoints, nCameras,), method='lm')
+
+    X_w_list_OPT = []
+    X_w_list_OPT = OpOptim.x[5 + (nCameras-1) * 6:]
+    X_w_computed_OPT = np.array(X_w_list_OPT).reshape((3, nPoints))
+    X_w_computed_OPT = np.vstack((X_w_computed_OPT, np.ones((1, nPoints))))  # homogeneous coords
     
-    # #### Camera 2
-    # theta = OpOptim.x[0:3]
-    # azimuth = OpOptim.x[3]
-    # elevation = OpOptim.x[4]
-
-    # R_2_1 = scipy.linalg.expm(crossMatrix(theta))
-    # t_2_1 = np.array([[np.sin(elevation)*np.cos(azimuth)], [np.sin(elevation)*np.sin(azimuth)], [np.cos(elevation)]]).reshape((3,1))
-    # t_2_1 = t_2_1.flatten()
-    # T_c2_c1 = ensamble_T(R_2_1, t_2_1)
-    # print("T_c2_c1 optimized:")
-    # print(T_c2_c1)
-
-    # points_c2_unnormalized, points_c2 = get_2D_points(X_w_computed_OPT, T_c2_c1, K_c)
-
-    # #### Camera 3
-    # start_idx = 1 * 5
-    # theta = OpOptim.x[start_idx:start_idx + 3]
-    # t_3_1 = OpOptim.x[start_idx + 3:start_idx + 6]
-
-    # R_3_1 = scipy.linalg.expm(crossMatrix(theta))
-    # T_c3_c1 = ensamble_T(R_3_1, t_3_1)
-    # print("T_c3_c1 optimized:")
-    # print(T_c3_c1)
-
-    # points_c3_unnormalized, points_c3 = get_2D_points(X_w_computed_OPT, T_c3_c1, K_c)
+    #### Camera 1
+    points_c1_unnormalized, points_c1 = get_2D_points(X_w_computed_OPT, T_c1_w, K_c)
     
-    # visualize_2D_points(img1, x1Data, points_c1_unnormalized)
-    # visualize_2D_points(img2, x2Data, points_c2_unnormalized)
-    # visualize_2D_points(img3, x3Data, points_c3_unnormalized)
+    #### Camera 2
+    theta = OpOptim.x[0:3]
+    azimuth = OpOptim.x[3]
+    elevation = OpOptim.x[4]
 
-    # #Unscaled
-    # plot_3D(X_w_computed_OPT, [T_w_c1,  np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Unscaled 3D cameras 1,2,3")
+    R_2_1 = scipy.linalg.expm(crossMatrix(theta))
+    t_2_1 = np.array([[np.sin(elevation)*np.cos(azimuth)], [np.sin(elevation)*np.sin(azimuth)], [np.cos(elevation)]]).reshape((3,1))
+    t_2_1 = t_2_1.flatten()
+    T_c2_c1 = ensamble_T(R_2_1, t_2_1)
+    print("T_c2_c1 optimized:")
+    print(T_c2_c1)
+
+    points_c2_unnormalized, points_c2 = get_2D_points(X_w_computed_OPT, T_c2_c1, K_c)
+
+    #### Camera 3
+    start_idx = 1 * 5
+    theta = OpOptim.x[start_idx:start_idx + 3]
+    t_3_1 = OpOptim.x[start_idx + 3:start_idx + 6]
+
+    R_3_1 = scipy.linalg.expm(crossMatrix(theta))
+    T_c3_c1 = ensamble_T(R_3_1, t_3_1)
+    print("T_c3_c1 optimized:")
+    print(T_c3_c1)
+
+    points_c3_unnormalized, points_c3 = get_2D_points(X_w_computed_OPT, T_c3_c1, K_c)
     
-    # #Recover scale with ground truth
-    # X_w_computed_OPT_scaled = X_w_computed_OPT * scale_factor
-    # t_2_1_scaled = t_2_1 * scale_factor
-    # T_c2_c1_scaled = ensamble_T(R_2_1, t_2_1_scaled)
+    visualize_2D_points(img1, x1Data, points_c1_unnormalized)
+    visualize_2D_points(img2, x2Data, points_c2_unnormalized)
+    visualize_2D_points(img3, x3Data, points_c3_unnormalized)
 
-    # #Plot scaled points
-    # plot_3D(X_w_computed_OPT_scaled, [T_w_c1,  np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1,2,3")
+    #Unscaled
+    plot_3D(X_w_computed_OPT, [T_w_c1,  np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Unscaled 3D cameras 1,2,3")
+    
+    #Recover scale with ground truth
+    X_w_computed_OPT_scaled = X_w_computed_OPT * scale_factor
+    t_2_1_scaled = t_2_1 * scale_factor
+    T_c2_c1_scaled = ensamble_T(R_2_1, t_2_1_scaled)
+
+    #Plot scaled points
+    plot_3D(X_w_computed_OPT_scaled, [T_w_c1,  np.linalg.inv(T_c2_c1_scaled), np.linalg.inv(T_c3_c1)],0, "Scaled 3D cameras 1,2,3")
 

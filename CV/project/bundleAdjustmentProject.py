@@ -538,7 +538,7 @@ if __name__ == '__main__':
     # t_GT_c1 = T_GT_c1[:3, 3]
     # t_GT_c2 = T_GT_c2[:3, 3]
     # scale_factor = np.linalg.norm(t_GT_c1 - t_GT_c2)
-    scale_factor = 7.5 #meters
+    scale_factor = 10.0 #meters
     print("Scale factor:")
     print(scale_factor)
 
@@ -550,6 +550,8 @@ if __name__ == '__main__':
 
     #Plot scaled points
     plot_3D(X_computed_OPT_scaled, [T_w_c1, np.linalg.inv(T_c2_c1_scaled)],0, "Scaled 3D cameras 1 and 2")
+
+    np.savetxt('X_new.txt', X_computed_OPT, fmt='%1.8e', delimiter=' ')
     
     # # #################
     # # ######## 3 ###### Perspective-N-Point pose estimation of camera three 
