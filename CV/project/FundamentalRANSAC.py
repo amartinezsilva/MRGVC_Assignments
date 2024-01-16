@@ -164,7 +164,7 @@ if __name__ == '__main__':
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
 
-    use_sift = input("Use SIFT correspondences? (yes/no): ").lower()
+    use_sift = 'no'
 
     if use_sift == 'yes':
         x1_SIFT = np.loadtxt('x1.txt')
