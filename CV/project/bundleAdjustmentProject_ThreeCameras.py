@@ -19,7 +19,7 @@ import numpy as np
 import scipy
 import scipy.optimize as scOptim
 import cv2
-
+from scipy.spatial.transform import Rotation as R
 
 ###### LAB 2 FUNCTIONS ######
 
@@ -371,7 +371,7 @@ def structure_from_motion(E, x1, x2, visualize=True):
         #     selected_R = R
         #     selected_t = t
         #     X_computed_selected = X_computed
-        if(idx == 3):
+        if(idx == 0):  #es el 0
             selected_R = R
             selected_t = t
             X_computed_selected = X_computed
@@ -408,16 +408,40 @@ def plot_3D(X_computed, transforms, idx, title="Untitled"):
     for index in range(X_computed_plot.shape[1]):
         X_computed_plot[1, index] = X_computed_plot[1, index] - average_y
         X_computed_plot[1, index] = - X_computed_plot[1, index]
-        X_computed_plot[1, index] = X_computed_plot[1, index] + average_y
+        X_computed_plot[1, index] = X_computed_plot[1, index] + average_y - average_y*8.0
         X_computed_plot[0, index] = X_computed_plot[0, index] - average_x
         X_computed_plot[0, index] = - X_computed_plot[0, index]
         X_computed_plot[0, index] = X_computed_plot[0, index] + average_x
 
+    T = np.zeros((4,4))
     for cam_idx,T_w_c in enumerate(transforms):
     #drawRefSystem(ax, np.eye(4, 4), '-', 'W')
         if cam_idx != 0:
-            transforms[1][0, 3] = -transforms[1][0, 3]
-        drawRefSystem(ax, T_w_c, '-', 'C'+str(cam_idx+1))
+            for i in range(4):
+                for j in range(4):
+                    T[i,j] = T_w_c[i,j]
+
+            T[0, 3] = -T[0, 3]
+            R_w_c = T[:3, :3]
+
+            # Convert the rotation matrix to a rotation object
+            r = R.from_matrix(R_w_c)
+
+            # Get the current rotation angles
+            angles = r.as_euler('zyx')  # Assuming ZYX Euler angles convention
+
+            # Modify the angle of rotation about the Z-axis
+            angles[2] = -angles[2]  # Change the angle here as needed
+            angles[1] = -angles[1]  # Change the angle here as needed
+
+            # Create a new rotation object with the modified angles
+            r_new = R.from_euler('zyx', angles)
+
+            # Update the rotation matrix in T_w_c
+            T[:3, :3] = r_new.as_matrix()
+            drawRefSystem(ax, T, '-', 'C'+str(cam_idx+1))
+
+        else: drawRefSystem(ax, T_w_c, '-', 'C'+str(cam_idx+1))
 
     #Plot only provided GT
     #ax.scatter(X_w[0, :], X_w[1, :], X_w[2, :], marker='.', label = "ground truth")
@@ -425,7 +449,8 @@ def plot_3D(X_computed, transforms, idx, title="Untitled"):
     
     #Plot points for comparison
     #if(not (X_computed == X_w).all()):
-        ax.scatter(X_computed_plot[0, :], X_computed_plot[1, :], X_computed_plot[2, :], marker='.', label = "estimated")
+        ax.scatter(X_computed_plot[0, :], X_computed_plot[1, :], X_computed_plot[2, :], marker='.')
+        #ax.scatter(X_computed[0, :], X_computed[1, :], X_computed[2, :], marker='.', label = "estimated")
         #plotNumbered3DPoints(ax, X_computed, 'r', (0.1, 0.1, 0.1)) # For plotting with numbers (choose one of the both options)
 
         ax.legend()
@@ -663,9 +688,9 @@ if __name__ == '__main__':
     x2Data = np.loadtxt('x_p1_p_kept.txt')
     x3Data = np.loadtxt('x_o1_o_kept.txt')
 
-    path_image_3 = './SuperGluePretrainedNetwork/assets/luis_samples_images/antigua.jpg'
-    path_image_1 = './SuperGluePretrainedNetwork/assets/luis_samples_images/img_1.jpg'
-    path_image_2 = './SuperGluePretrainedNetwork/assets/luis_samples_images/img_parallax_1.jpg'
+    path_image_3 = './SuperGluePretrainedNetwork/assets/andres_samples_images/antigua.jpg'
+    path_image_1 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_1.jpg'
+    path_image_2 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_parallax1.jpg'
 
     # Read images
     img1 = cv2.cvtColor(cv2.imread(path_image_1), cv2.COLOR_BGR2RGB)
@@ -769,10 +794,11 @@ if __name__ == '__main__':
     #Unscaled
     plot_3D(X_computed_OPT, [T_w_c1, np.linalg.inv(T_c2_c1)],0,"Unscaled 3D")
     
-    x_measure = X_computed_OPT[0, 146] - X_computed_OPT[0, 229]
-    y_measure = X_computed_OPT[1, 146] - X_computed_OPT[1, 229]
+    x_measure = X_computed_OPT[0, 2] - X_computed_OPT[0, 4]
+    y_measure = X_computed_OPT[1, 2] - X_computed_OPT[1, 4]
     dist_measure = np.sqrt(x_measure * x_measure + y_measure * y_measure)
-    scale_factor = 8.5 #meters
+    #scale_factor = 10.5/dist_measure
+    scale_factor = 10.5
     print("Scale factor:")
     print(scale_factor)
 
@@ -788,8 +814,11 @@ if __name__ == '__main__':
     M = P [:3, :3]
     print(np.sign(np.linalg.det(M))* P)
     K_c3, R_c3_c1, t_c3_c1, _, _, _, _ = cv2.decomposeProjectionMatrix(np.sign(np.linalg.det(M)) * P)
+    K_c3 = K_c3 / K_c3[2,2]
+    print("K_c3:")
     print(K_c3)
     print(R_c3_c1)
+    print("t_c3_c1:")
     print(t_c3_c1)
     t_c3_c1 = t_c3_c1 / t_c3_c1[3]
     t_c3_c1 = t_c3_c1[0:3]
@@ -813,7 +842,6 @@ if __name__ == '__main__':
     # R, _ = cv2.Rodrigues(rvec)
     # R_c3_c1 = scipy.linalg.expm(crossMatrix(rvec))
     # t_c3_c1 = tvec.flatten()
-
     print("T_c3_c1:")
     print(T_c3_c1)
     #plot_3D(X_w, X_w, [T_w_c1, np.linalg.inv(T_c2_c1), np.linalg.inv(T_c3_c1)],0, "Camera 3 representation")

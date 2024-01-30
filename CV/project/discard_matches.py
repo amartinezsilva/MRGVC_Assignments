@@ -67,7 +67,7 @@ if __name__ == '__main__':
     print("Number of matches with the parallax: ")
     print(x_p1_1.shape[1])
 
-    threshold_error = 5
+    threshold_error = 1
     index_list_kept_p = []
     index_list_kept_o = []
 
