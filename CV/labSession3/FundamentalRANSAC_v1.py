@@ -175,8 +175,23 @@ if __name__ == '__main__':
         path = './results/image1_image2_matches.npz' 
         npz = np.load(path) 
         matches = npz['matches']
-        x1 = npz['keypoints0'].T
-        x2 = npz['keypoints1'].T
+        keypoints0 = npz['keypoints0']
+        keypoints1 = npz['keypoints1']
+        x1 = []
+        x2 = []
+        matches_matrix = []
+
+        for i in range(matches.size):
+            if matches[i] != -1: # here there is a match
+                match_x_0 = keypoints0[i]
+                x1.append(match_x_0)
+                match_x_1 = keypoints1[matches[i]]
+                x2.append(match_x_1)
+                matches_matrix.append([i, matches[i]])
+        
+        x1 = np.array(x1).T
+        x2 = np.array(x2).T
+        matches_matrix = np.array(matches_matrix)
         descriptors0 = npz['descriptors0']
         descriptors1 = npz['descriptors1']
     else:
