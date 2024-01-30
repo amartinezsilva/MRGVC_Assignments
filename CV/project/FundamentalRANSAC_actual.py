@@ -21,6 +21,7 @@ import scipy.linalg as scAlg
 import sys
 import cv2
 
+
 def drawLine(l,strFormat,lWidth):
     """
     Draw a line
@@ -162,56 +163,57 @@ def visualize_matches(img1, kp1, img2, kp2, matches):
 if __name__ == '__main__':
     np.set_printoptions(precision=4,linewidth=1024,suppress=True)
 
-    x1_SIFT = np.loadtxt('x1.txt')
-    x2_SIFT = np.loadtxt('x2.txt')
 
-    use_sift = input("Use SIFT correspondences? (yes/no): ").lower()
+    use_sift = 'no'
 
     if use_sift == 'yes':
+        x1_SIFT = np.loadtxt('x1.txt')
+        x2_SIFT = np.loadtxt('x2.txt')
         x1 = x1_SIFT
         x2 = x2_SIFT
 
     elif use_sift == 'no':
-        path = './results/image1_image2_matches.npz' 
+        path = './SuperGluePretrainedNetwork/assets/andres_samples_images/output/img_1_img_parallax1_matches.npz' 
         npz = np.load(path) 
+        # Matches is an array of keyponts0.shape[0] (number of points). Each component contains the index of the match in keypoints1
         matches = npz['matches']
         keypoints0 = npz['keypoints0']
         keypoints1 = npz['keypoints1']
-        x1 = []
-        x2 = []
-        matches_matrix = []
-
-        for i in range(matches.size):
-            if matches[i] != -1: # here there is a match
-                match_x_0 = keypoints0[i]
-                x1.append(match_x_0)
-                match_x_1 = keypoints1[matches[i]]
-                x2.append(match_x_1)
-                matches_matrix.append([i, matches[i]])
+        
+        valid = matches > -1
+        x1 = keypoints0[valid]
+        x2 = keypoints1[matches[valid]]
         
         x1 = np.array(x1).T
+        print(x1.shape)
+        np.savetxt('x2_actual_superglue.txt', x1, fmt='%1.8e', delimiter=' ')
         x2 = np.array(x2).T
-        matches_matrix = np.array(matches_matrix)
-        descriptors0 = npz['descriptors0']
-        descriptors1 = npz['descriptors1']
+        np.savetxt('x3_superglue.txt', x2, fmt='%1.8e', delimiter=' ')
+
+        # matches_matrix = np.array(matches_matrix)
+        # descriptors0 = npz['descriptors0']
+        # descriptors1 = npz['descriptors1']
     else:
         print("Invalid input. Defaulting to SIFT correspondences.")
+        x1_SIFT = np.loadtxt('x1.txt')
+        x2_SIFT = np.loadtxt('x2.txt')
         x1 = x1_SIFT
         x2 = x2_SIFT
 
-    path_image_1 = 'image1.png'
-    path_image_2 = 'image2.png'
+    path_image_1 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_1.jpg'
+    path_image_2 = './SuperGluePretrainedNetwork/assets/andres_samples_images/img_parallax1.jpg'
 
     # Read images
-    image_pers_1 = cv2.imread(path_image_1)
-    image_pers_2 = cv2.imread(path_image_2)
+    image_pers_1 = cv2.cvtColor(cv2.imread(path_image_1), cv2.COLOR_BGR2RGB)
+    image_pers_2 = cv2.cvtColor(cv2.imread(path_image_2), cv2.COLOR_BGR2RGB)
+
+
+    x1_homogeneous = np.vstack([x1, np.ones((1, x1.shape[1]))])
+    x2_homogeneous = np.vstack([x2, np.ones((1, x2.shape[1]))])
 
     N1 = normalizationMatrix(image_pers_1.shape[1], image_pers_1.shape[0])
     N2 = normalizationMatrix(image_pers_2.shape[1], image_pers_2.shape[0])
-    
-    x1_homogeneous = np.vstack([x1, np.ones((1, x1.shape[1]))])
-    x2_homogeneous = np.vstack([x2, np.ones((1, x2.shape[1]))])
-    
+        
     x1Norm = N1 @ x1_homogeneous
     x2Norm = N2 @ x2_homogeneous
 
@@ -219,6 +221,8 @@ if __name__ == '__main__':
     keypoints1 = [cv2.KeyPoint(x=x, y=y, size=x2.shape[1]) for x, y in zip(x2[0], x2[1])]
 
     nMatches = x1_homogeneous.shape[1]
+    print("Number of matches before RANSAC:")
+    print(nMatches)
     dMatchesList = []
 
     for i in range(nMatches):
@@ -229,16 +233,18 @@ if __name__ == '__main__':
     visualize_matches(image_pers_1, keypoints0, image_pers_2, keypoints1, dMatchesList)
 
     # RANSAC
-    threshold = 1 # pixels
+    inliersSigma = 1 #Standard deviation of inliers
+    minInliers = np.round(x1.shape[0] * 0.76)
+    minInliers = minInliers.astype(int)
 
     best_F = None
     best_num_inliers = 0
-    iterations = 5000
+    #iterations = 5000
     best_inliers = []
 
-    for kAttempt in range(iterations):
+    while best_num_inliers < minInliers:
         # Generate random indices
-        random_indices = np.random.choice(x1.shape[1], 8, replace=False)
+        random_indices = np.random.choice(x1Norm.shape[1], 8, replace=False)
 
         # Select 4 random points
         random_x1 = x1Norm[:,random_indices]
@@ -247,15 +253,15 @@ if __name__ == '__main__':
         F = calculateF(random_x1, random_x2)
 
         # Identify points not used for H calculation
-        remaining_indices = [i for i in range(x1.shape[1]) if i not in random_indices]
+        remaining_indices = [i for i in range(x1Norm.shape[1]) if i not in random_indices]
 
         # Select the remaining points for evaluation
-        x1_eval = x1_homogeneous[:, remaining_indices]
-        x2_eval = x2_homogeneous[:, remaining_indices]
+        x1_eval = x1Norm[:, remaining_indices]
+        x2_eval = x2Norm[:, remaining_indices]
 
         n_matches = x1_eval.shape[1]
 
-        num_inliers, inliers = evaluate_F(F, x1_eval, x2_eval, threshold)
+        num_inliers, inliers = evaluate_F(F, x1_eval, x2_eval, inliersSigma)
 
         if num_inliers > best_num_inliers:
 
@@ -294,10 +300,12 @@ if __name__ == '__main__':
 
     draw_epipolar_line_img2(F_21)
 
+    x1_RANSAC = np.zeros((2,np.array(best_inliers).shape[0]))
+    x2_RANSAC = np.zeros((2,np.array(best_inliers).shape[0]))
 
+    for i in range(np.array(best_inliers).shape[0]): # [1 2 3 6 7 8 10 12]
+        x1_RANSAC[:,i] = x1[:, best_inliers[i]]
+        x2_RANSAC[:,i] = x2[:, best_inliers[i]]
 
-
-
-
-
-    
+    np.savetxt('x2_actual_RANSAC.txt', x1_RANSAC, fmt='%1.8e', delimiter=' ')
+    np.savetxt('x3_RANSAC.txt', x2_RANSAC, fmt='%1.8e', delimiter=' ')
